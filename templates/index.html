@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <title>snipURlnk</title>
+    </head>
+
+    
+
+    <body>
+        <h1>snipURlnk</h1>
+        <input type="text" id="urlInput" placeholder="Paste a long URL">
+        <button id="shortenBtn">Shorten</button>
+        <p id="result"></p>
+
+        <script>
+        const urlInput = document.getElementById("urlInput");
+        const shortenBtn = document.getElementById("shortenBtn");
+        const result = document.getElementById("result");
+
+        shortenBtn.addEventListener("click", async function () {
+            const longUrl = urlInput.value;   
+            const response = await fetch("/shorten?url=" + encodeURIComponent(longUrl));
+
+            if (!response.ok) {
+                result.textContent = await response.text();
+                return;
+            }
+
+            const code = await response.text();
+            result.textContent = window.location.origin + "/" + code;  
+            });
+
+        </script>
+    
+    </body>
+
+</html>

@@ -1,17 +1,17 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, render_template
 from shorten import shorten, expand   # use YOUR filename instead of "shortener"
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "URL shortener is running"
+    return render_template("index.html")
 
 @app.route("/shorten")
 def create_short_link():
-    url = request.args.get("url")
+    url = request.args.get("url", "").strip()
     
-    if url is None:
+    if not url:
         return "Missing url", 400
     return shorten(url)
 
