@@ -1,6 +1,7 @@
 import random
 import string
 import sqlite3
+from urllib.parse import urlparse
 
 DB_PATH = "links.db"
 
@@ -47,7 +48,14 @@ def expand(code):
     conn.commit()
     conn.close()
 
-    return result[0] # return the url
+    if result is not None:
+        return result[0] # return the url
+    
 
+def is_valid_url(url):
+    parsed = urlparse(url)
+
+    return parsed.scheme in ("http","https") and bool(parsed.netloc)
+    
 
 

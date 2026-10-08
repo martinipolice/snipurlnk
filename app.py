@@ -1,5 +1,7 @@
 from flask import Flask, request, redirect, render_template
-from shorten import shorten, expand   # use YOUR filename instead of "shortener"
+from shorten import shorten, expand, is_valid_url   # use YOUR filename instead of "shortener"
+
+
 
 app = Flask(__name__)
 
@@ -13,7 +15,12 @@ def create_short_link():
     
     if not url:
         return "Missing url", 400
+    
+    if not is_valid_url(url):
+        return "Invalid URL", 400
+
     return shorten(url)
+
 
 @app.route("/<code>")
 def follow_link(code):
