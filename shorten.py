@@ -52,10 +52,16 @@ def expand(code):
         return result[0] # return the url
     
 
-def is_valid_url(url):
+def is_valid_url(url): # this checks if the url is valid: have a http/https and have a valid netloc
     parsed = urlparse(url)
 
-    return parsed.scheme in ("http","https") and bool(parsed.netloc)
+    return (parsed.scheme in ("http","https")
+            and bool(parsed.hostname) 
+            and "." in parsed.hostname)
     
 
+def normalize_url(url): # this normalizes the url if it does not have http/https
+    if url.lower().startswith(("http://", "https://")):
+        return url
 
+    return "https://" + url
