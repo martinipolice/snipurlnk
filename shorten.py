@@ -1,9 +1,22 @@
 import random
 import string
 import sqlite3
+import re
 from urllib.parse import urlparse
 
 DB_PATH = "links.db"
+
+RESERVED_ALIASES = { # these are the reserved alias
+       "shorten", "static", "api", "admin", "login", "logout", "signup",
+       "register", "dashboard", "settings", "account", "help", "support",
+       "about", "contact", "terms", "privacy", "home", "index", "null",
+       "undefined", "root",
+   }
+
+def is_valid_alias(alias): # checks if there is consistency and no words from the reserved aliases
+    good_pattern = re.fullmatch(r"[A-Za-z0-9_-]{3,30}", alias)
+    not_reserved = alias.lower() not in RESERVED_ALIASES
+    return bool(good_pattern) and not_reserved
 
 def init_db(): # this initialize an SQLite to store the code-url pair
     conn = sqlite3.connect(DB_PATH)
@@ -11,7 +24,7 @@ def init_db(): # this initialize an SQLite to store the code-url pair
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS links (
-            code TEXT PRIMARY KEY,
+            code TEXT PRIMARY KEY COLLATE NOCASE,
             url TEXT NOT NULL
         )
     """)
@@ -21,11 +34,23 @@ def init_db(): # this initialize an SQLite to store the code-url pair
 
 init_db() # initialize it
 
-def shorten(url):
-    characterPool = string.ascii_letters + string.digits # char pool of letters and nums
+def shorten(url, alias=None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # if there is an alias, ...
+    if alias:
+            try:
+                cursor.execute("INSERT INTO links (code, url) VALUES (?, ?)", (alias, url))
+                conn.commit()
+                conn.close()
+                return alias            
+            except sqlite3.IntegrityError:
+                conn.close()
+                return None             
+
+    # no alias
+    characterPool = string.ascii_letters + string.digits # char pool of letters and nums
     while True:
         random_code = ''.join(random.choices(characterPool, k=6)) # generate a random 6-char code
 

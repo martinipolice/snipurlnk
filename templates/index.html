@@ -9,17 +9,24 @@
     <body>
         <h1>snipURlnk</h1>
         <input type="text" id="urlInput" placeholder="Paste a long URL">
+        <input type="text" id="aliasInput" placeholder="Custom alias (optional)">
         <button id="shortenBtn">Shorten</button>
         <p id="result"></p>
 
         <script>
         const urlInput = document.getElementById("urlInput");
+        const aliasInput = document.getElementById("aliasInput");
         const shortenBtn = document.getElementById("shortenBtn");
         const result = document.getElementById("result");
 
         shortenBtn.addEventListener("click", async function () {
             const longUrl = urlInput.value;   
-            const response = await fetch("/shorten?url=" + encodeURIComponent(longUrl));
+            const alias = aliasInput.value;
+
+            const response = await fetch(
+                "/shorten?url=" + encodeURIComponent(longUrl) +
+                "&alias=" + encodeURIComponent(alias)
+            );
 
             if (!response.ok) {
                 result.textContent = await response.text();
@@ -31,6 +38,9 @@
 
             const urlText = document.createElement("span");
             urlText.textContent = shortUrl;
+
+            const copyBtn = document.createElement("button");
+            copyBtn.textContent = "Copy";
 
             copyBtn.addEventListener("click", async function () {
                 try {
