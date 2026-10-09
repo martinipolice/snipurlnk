@@ -27,7 +27,37 @@
             }
 
             const code = await response.text();
-            result.textContent = window.location.origin + "/" + code;  
+            const shortUrl = window.location.origin + "/" + code;  
+
+            const urlText = document.createElement("span");
+            urlText.textContent = shortUrl;
+
+            copyBtn.addEventListener("click", async function () {
+                try {
+                    await navigator.clipboard.writeText(shortUrl);
+                    copyBtn.textContent = "Copied!";      // success message
+                } catch (error) {
+                    copyBtn.textContent = "Failed";      // failure message
+                }
+
+                setTimeout(function () {
+                    copyBtn.textContent = "Copy";
+                }, 1500);
+            });
+
+
+            const goBtn = document.createElement("button");
+            goBtn.textContent = "Go";
+            goBtn.addEventListener("click", function () {
+                window.open(shortUrl, "_blank");
+            });
+
+            result.textContent = "";
+            result.appendChild(urlText);
+            result.appendChild(document.createTextNode(" "));
+            result.appendChild(copyBtn);
+            result.appendChild(document.createTextNode(" "));
+            result.appendChild(goBtn);
             });
 
         </script>
