@@ -4,14 +4,20 @@
 
     <head>
         <title>snipURlnk</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     </head>
 
-    <body>
-        <h1>snipURlnk</h1>
-        <input type="text" id="urlInput" placeholder="Paste a long URL">
-        <input type="text" id="aliasInput" placeholder="Custom alias (optional)">
-        <button id="shortenBtn">Shorten</button>
-        <p id="result"></p>
+    <body class="p-auto-dark-mode">
+        <main>
+            <h1>snipURlnk</h1>
+            <p>Paste a long link, get a short one.</p>
+            <input class="p-field" type="text" id="urlInput" placeholder="Paste a long URL" aria-label="Long URL">
+            <input class="p-field" type="text" id="aliasInput" placeholder="Custom alias (optional)" aria-label="Custom alias">
+            <button class="p-button p-button-primary" id="shortenBtn">Shorten</button>
+            <div id="result" aria-live="polite"></div>
+        </main>
 
         <script>
         const urlInput = document.getElementById("urlInput");
@@ -19,14 +25,29 @@
         const shortenBtn = document.getElementById("shortenBtn");
         const result = document.getElementById("result");
 
+        [urlInput, aliasInput].forEach(function (input) {
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") shortenBtn.click();
+            });
+        });
+
         shortenBtn.addEventListener("click", async function () {
-            const longUrl = urlInput.value;   
+            const longUrl = urlInput.value;
             const alias = aliasInput.value;
 
-            const response = await fetch(
-                "/shorten?url=" + encodeURIComponent(longUrl) +
-                "&alias=" + encodeURIComponent(alias)
-            );
+            let response;
+            try {
+                response = await fetch(
+                    "/shorten?url=" + encodeURIComponent(longUrl) +
+                    "&alias=" + encodeURIComponent(alias)
+                );
+            } catch (error) {
+                result.className = "error";
+                result.textContent = "Network error";
+                return;
+            }
+
+            result.className = response.ok ? "" : "error";
 
             if (!response.ok) {
                 result.textContent = await response.text();
@@ -34,12 +55,13 @@
             }
 
             const code = await response.text();
-            const shortUrl = window.location.origin + "/" + code;  
+            const shortUrl = window.location.origin + "/" + code;
 
             const urlText = document.createElement("span");
             urlText.textContent = shortUrl;
 
             const copyBtn = document.createElement("button");
+            copyBtn.className = "p-button p-button-default";
             copyBtn.textContent = "Copy";
 
             copyBtn.addEventListener("click", async function () {
@@ -57,6 +79,7 @@
 
 
             const goBtn = document.createElement("button");
+            goBtn.className = "p-button p-button-default";
             goBtn.textContent = "Go";
             goBtn.addEventListener("click", function () {
                 window.open(shortUrl, "_blank");
@@ -71,7 +94,7 @@
             });
 
         </script>
-    
+
     </body>
 
 </html>

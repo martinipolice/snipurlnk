@@ -1,0 +1,22 @@
+:root { color-scheme: light dark; }
+
+body {
+    margin: 0;
+    padding: 3rem 1rem;
+    background: light-dark(#F5F5F7, #000);
+    color: light-dark(#1D1D1F, #F5F5F7);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    line-height: 1.5;
+}
+
+main { max-width: 28rem; margin: 0 auto; }
+h1 { margin: 0 0 .25rem; font-size: 2rem; letter-spacing: -.02em; }
+p { margin: 0 0 1.5rem; color: light-dark(#6E6E73, #98989D); }
+
+.p-field, .p-button { width: 100%; margin-bottom: .75rem; }
+.p-field { box-sizing: border-box; }
+
+#result { display: flex; align-items: center; gap: .5rem; }
+#result span { flex: 1; font-family: ui-monospace, "SF Mono", monospace; overflow-wrap: anywhere; }
+#result .p-button { width: auto; margin: 0; }
+#result.error { color: light-dark(#D70015, #FF453A); }

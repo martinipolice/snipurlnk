@@ -9,17 +9,19 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 - Redirect from the short link to the original URL
 - Links are stored in SQLite, so they survive server restarts
 - Collision-safe code generation: a taken code is never overwritten
-- URL validation: only `http` and `https` links with a real domain are accepted
+- URL validation: only `http` and `https` links with a real domain are accepted, and bad ports, spaces, control characters, and URLs over 2,048 characters are rejected
 - Auto-fixes missing schemes (`example.com` becomes `https://example.com`)
 - Every submission creates its own new link, even for a URL that was shortened before
-- Simple web page with clear error messages, plus Copy and Go buttons next to the short link
+- Web page with clear error messages, Copy and Go buttons, and Enter-to-submit
+- Light and dark themes that follow the device setting
+- Styled with [Puppertino](https://github.com/codedgar/Puppertino), loaded from the jsDelivr CDN
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
 
 ## How it works
 
 1. You submit a URL, and optionally a custom alias.
 2. The server cleans up the URL: it trims whitespace and adds `https://` if no scheme is given.
-3. It validates the URL. The scheme must be `http` or `https`, and the hostname must contain a dot. Anything else is rejected with a `400`.
+3. It validates the URL. The scheme must be `http` or `https`, the hostname must contain a dot, and the URL must be printable, free of spaces, have a valid port, and be at most 2,048 characters. Anything else is rejected with a `400`.
 4. If an alias was given, it must match the allowed pattern and not be a reserved word (like `admin` or `login`), or the server returns a `400`.
 5. The server saves the pair `code -> URL` in a SQLite table.
    - With an alias, it tries to insert that code once. If it's taken, the server returns a `409`.
@@ -42,7 +44,7 @@ pip install flask
 python app.py
 ```
 
-Then open http://127.0.0.1:5000 in your browser. The database file (`links.db`) is created automatically on first run.
+Then open http://127.0.0.1:5000 in your browser. The database file (`links.db`) is created automatically on first run. The page loads its stylesheet from a CDN, so it needs an internet connection to look styled.
 
 ## Routes
 
@@ -59,7 +61,9 @@ snipurlnk/
 ├── app.py          # Flask routes
 ├── shorten.py      # URL and alias validation, code generation, SQLite storage
 ├── templates/
-│   └── index.html  # Front end
+│   └── index.html  # Front end and page script
+├── static/
+│   └── style.css   # Layout and theme tweaks on top of Puppertino
 └── README.md
 ```
 
@@ -75,10 +79,10 @@ snipurlnk/
 - [x] Clear error messages on the page, and a clickable short link
 - [x] Copy and Go buttons
 - [x] Custom aliases
-- [ ] CSS styling
+- [x] CSS styling (light and dark themes)
 - [ ] Click counts, link expiry, rate limiting
-- [ ] Deployment
+- [ ] Deployment (switch `/shorten` to POST and turn off `debug=True` first)
 
 ## What I'm learning
 
-Flask routing, HTTP status codes and redirects, SQL basics, input validation with regular expressions, error handling with try/except, DOM scripting in JavaScript, and Git/GitHub workflow.
+Flask routing, HTTP status codes and redirects, SQL basics, input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow.

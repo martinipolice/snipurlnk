@@ -69,20 +69,23 @@ def expand(code):
 
     cursor.execute("SELECT url FROM links WHERE code = ?", (code,)) # this get the url from that specific code
     result = cursor.fetchone() # this fetches that url
-
-    conn.commit()
+    
     conn.close()
 
     if result is not None:
         return result[0] # return the url
     
 
-def is_valid_url(url): # this checks if the url is valid: have a http/https and have a valid netloc
-    parsed = urlparse(url)
-
-    return (parsed.scheme in ("http","https")
-            and bool(parsed.hostname) 
-            and "." in parsed.hostname)
+def is_valid_url(url):
+    if len(url) > 2048 or not url.isprintable() or " " in url:
+        return False
+    try:
+        parsed = urlparse(url)
+        parsed.port  # raises ValueError on a bad port
+    except ValueError:
+        return False
+    host = parsed.hostname
+    return parsed.scheme in ("http", "https") and bool(host) and "." in host.strip(".")
     
 
 def normalize_url(url): # this normalizes the url if it does not have http/https
