@@ -80,8 +80,14 @@ snipurlnk/
 - [x] Copy and Go buttons
 - [x] Custom aliases
 - [x] CSS styling (light and dark themes)
-- [ ] Click counts, link expiry, rate limiting
-- [ ] Deployment (switch `/shorten` to POST and turn off `debug=True` first)
+- [ ] Click counts (stored per link, no display yet)
+- [ ] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
+- [ ] Rate limiting per visitor
+- [ ] Report and remove links (admin key kept in an environment variable)
+- [ ] Move from SQLite to a free hosted database (Postgres)
+- [ ] Deploy on a free host
+- [ ] User accounts and a dashboard showing each person's links and click counts
+- [ ] Link expiry
 
 ## What I'm learning
 
