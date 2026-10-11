@@ -1,5 +1,5 @@
 from flask import Flask, request, redirect, render_template
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias   # use YOUR filename instead of "shortener"
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click   # use YOUR filename instead of "shortener"
 
 
 
@@ -36,11 +36,12 @@ def create_short_link():
 @app.route("/<code>")
 def follow_link(code):
     
-    link = expand(code)
+    link = expand(code) 
    
     if link is None:
         return "Link not found", 404
-    
+
+    record_click(code)
     return redirect(link)
 
 if __name__ == "__main__":

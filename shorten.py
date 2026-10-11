@@ -25,7 +25,8 @@ def init_db(): # this initialize an SQLite to store the code-url pair
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS links (
             code TEXT PRIMARY KEY COLLATE NOCASE,
-            url TEXT NOT NULL
+            url TEXT NOT NULL,
+            clicks INTEGER NOT NULL DEFAULT 0
         )
     """)
 
@@ -93,3 +94,9 @@ def normalize_url(url): # this normalizes the url if it does not have http/https
         return url
 
     return "https://" + url
+
+def record_click(code): # this adds click count
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("UPDATE links SET clicks = clicks + 1 WHERE code = ?", (code,))
+    conn.commit()
+    conn.close()
