@@ -38,8 +38,10 @@
             let response;
             try {
                 response = await fetch(
-                    "/shorten?url=" + encodeURIComponent(longUrl) +
-                    "&alias=" + encodeURIComponent(alias)
+                   "/shorten", {
+                    method: "POST",
+                    body: new URLSearchParams({ url: longUrl, alias: alias })
+                    }   
                 );
             } catch (error) {
                 result.className = "error";

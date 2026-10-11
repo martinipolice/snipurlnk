@@ -9,10 +9,10 @@ app = Flask(__name__)
 def home():
     return render_template("index.html")
 
-@app.route("/shorten")
+@app.route("/shorten", methods=["POST"])
 def create_short_link():
-    url = request.args.get("url", "").strip()
-    alias = request.args.get("alias", "").strip()
+    url = request.form.get("url", "").strip()
+    alias = request.form.get("alias", "").strip()
     
     if not url:
         return "Missing url", 400
@@ -45,4 +45,4 @@ def follow_link(code):
     return redirect(link)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()

@@ -48,12 +48,17 @@ python app.py
 
 Then open http://127.0.0.1:5000 in your browser. The database file (`links.db`) is created automatically on first run. The page loads its stylesheet from a CDN, so it needs an internet connection to look styled.
 
+**Auto-reload while developing:** debug mode is off by default. Turn it on before starting the server:
+
+- Windows PowerShell: `$env:FLASK_DEBUG="1"`
+- macOS or Linux: `export FLASK_DEBUG=1`
+
 ## Routes
 
 | Route | Description |
 |-------|-------------|
 | `/` | Web page with the shortener form |
-| `/shorten?url=...&alias=...` | Creates a short link and returns the code. `alias` is optional. Returns `400` for a missing or invalid URL or alias, and `409` if the alias is taken |
+| `POST /shorten` | Creates a short link from the form fields `url` and optional `alias`, and returns the code. Returns `400` for a missing or invalid URL or alias, and `409` if the alias is taken |
 | `/<code>` | Redirects to the original URL (`404` if the code doesn't exist) |
 
 ## Project structure
@@ -83,7 +88,7 @@ snipurlnk/
 - [x] Custom aliases
 - [x] CSS styling (light and dark themes)
 - [x] Click counts (stored per link, no display yet)
-- [ ] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
+- [x] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
 - [ ] Rate limiting per visitor
 - [ ] Report and remove links (admin key kept in an environment variable)
 - [ ] Move from SQLite to a free hosted database (Postgres)
