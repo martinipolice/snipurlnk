@@ -16,6 +16,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 - Light and dark themes that follow the device setting
 - Styled with [Puppertino](https://github.com/codedgar/Puppertino), loaded from the jsDelivr CDN
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
+- Counts how many times each short link is visited (stored, not displayed yet)
 
 ## How it works
 
@@ -32,6 +33,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 
 - **One link per submission:** submitting the same URL twice creates two different short links. This keeps each person's link independent, and it makes per-link features (like click counts) possible later.
 - **Case-insensitive codes:** the `code` column uses `COLLATE NOCASE`, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
+- **Click counts include all redirects:** every successful visit to a short link adds 1, including automated ones like link previews and prefetches. Filtering these out is a possible later improvement.
 
 ## Getting started
 
@@ -80,7 +82,7 @@ snipurlnk/
 - [x] Copy and Go buttons
 - [x] Custom aliases
 - [x] CSS styling (light and dark themes)
-- [ ] Click counts (stored per link, no display yet)
+- [x] Click counts (stored per link, no display yet)
 - [ ] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
 - [ ] Rate limiting per visitor
 - [ ] Report and remove links (admin key kept in an environment variable)
