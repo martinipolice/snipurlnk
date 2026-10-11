@@ -17,6 +17,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 - Styled with [Puppertino](https://github.com/codedgar/Puppertino), loaded from the jsDelivr CDN
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
 - Counts how many times each short link is visited (stored, not displayed yet)
+- Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
 
 ## How it works
 
@@ -27,7 +28,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 5. The server saves the pair `code -> URL` in a SQLite table.
    - With an alias, it tries to insert that code once. If it's taken, the server returns a `409`.
    - Without one, it generates a random code and retries with a new one if there's a collision.
-6. When someone visits `/<code>`, the server looks up the code and redirects to the original URL. Unknown codes return a `404`.
+6. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown codes return a `404` and change nothing.
 
 ### Design decisions
 
@@ -42,7 +43,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 ```bash
 git clone https://github.com/martinipolice/snipurlnk.git
 cd snipurlnk
-pip install flask
+pip install -r requirements.txt
 python app.py
 ```
 
@@ -89,7 +90,7 @@ snipurlnk/
 - [x] CSS styling (light and dark themes)
 - [x] Click counts (stored per link, no display yet)
 - [x] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
-- [ ] Rate limiting per visitor
+- [x] Rate limiting per visitor
 - [ ] Report and remove links (admin key kept in an environment variable)
 - [ ] Move from SQLite to a free hosted database (Postgres)
 - [ ] Deploy on a free host

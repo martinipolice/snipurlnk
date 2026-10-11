@@ -1,15 +1,27 @@
 from flask import Flask, request, redirect, render_template
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click   # use YOUR filename instead of "shortener"
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click   
 
 
 
 app = Flask(__name__)
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["120 per minute"],
+    storage_uri="memory://",
+)
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
 @app.route("/shorten", methods=["POST"])
+@limiter.limit("10 per minute")
+@limiter.limit("100 per day")
 def create_short_link():
     url = request.form.get("url", "").strip()
     alias = request.form.get("alias", "").strip()
@@ -43,6 +55,10 @@ def follow_link(code):
 
     record_click(code)
     return redirect(link)
+
+@app.errorhandler(429)
+def too_many_requests(error):
+    return "Too many requests. Please wait a minute and try again.", 429
 
 if __name__ == "__main__":
     app.run()
