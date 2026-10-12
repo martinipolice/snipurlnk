@@ -1,4 +1,10 @@
-# snipURlnk
+```
+--   ___ _  _ ___ ___ _   _ ___ _    _  _ _  __ ----
+--  / __| \| |_ _| _ \ | | | _ \ |  | \| | |/ / ----
+--  \__ \ .` || ||  _/ |_| |   / |__| .` | ' < ----
+--  |___/_|\_|___|_|  \___/|_|_\____|_|\_|_|\_\ ----
+--  ------------------------------------
+```
 
 A URL shortener built with Python, Flask, and SQLite. I'm building it as a learning project, one step at a time.
 
