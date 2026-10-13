@@ -24,6 +24,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
 - Counts how many times each short link is visited (stored, not displayed yet)
 - Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
+- Report a link from the page, and review and remove reported links with admin commands
 
 ## How it works
 
@@ -34,13 +35,14 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 5. The server saves the pair `code -> URL` in a SQLite table.
    - With an alias, it tries to insert that code once. If it's taken, the server returns a `409`.
    - Without one, it generates a random code and retries with a new one if there's a collision.
-6. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown codes return a `404` and change nothing.
+6. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown or removed codes return a `404` and change nothing.
 
 ### Design decisions
 
 - **One link per submission:** submitting the same URL twice creates two different short links. This keeps each person's link independent, and it makes per-link features (like click counts) possible later.
 - **Case-insensitive codes:** the `code` column uses `COLLATE NOCASE`, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
 - **Click counts include all redirects:** every successful visit to a short link adds 1, including automated ones like link previews and prefetches. Filtering these out is a possible later improvement.
+- **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
 
 ## Getting started
 
@@ -66,7 +68,21 @@ Then open http://127.0.0.1:5000 in your browser. The database file (`links.db`) 
 |-------|-------------|
 | `/` | Web page with the shortener form |
 | `POST /shorten` | Creates a short link from the form fields `url` and optional `alias`, and returns the code. Returns `400` for a missing or invalid URL or alias, and `409` if the alias is taken |
-| `/<code>` | Redirects to the original URL (`404` if the code doesn't exist) |
+| `GET /report` | Page with a form to report a short link |
+| `POST /report` | Saves a report from the form fields `link` (a short link or code) and optional `reason`. Returns `404` if the link doesn't exist. Rate limited |
+| `/<code>` | Redirects to the original URL (`404` if the code doesn't exist or was removed) |
+
+## Admin commands
+
+Run these from the project folder to review reports and remove links. There is no admin page on the site.
+
+```bash
+python admin.py reports          # list open reports, grouped by link
+python admin.py remove <code>    # hide a link; visits show "Link not found"
+python admin.py dismiss <code>   # clear reports for a link you decided to keep
+```
+
+Removed links stay in the database, so their codes can't be registered again.
 
 ## Project structure
 
@@ -74,8 +90,10 @@ Then open http://127.0.0.1:5000 in your browser. The database file (`links.db`) 
 snipurlnk/
 ├── app.py          # Flask routes
 ├── shorten.py      # URL and alias validation, code generation, SQLite storage
+├── admin.py        # Review reports and remove links from the terminal
 ├── templates/
-│   └── index.html  # Front end and page script
+│   ├── index.html  # Front end and page script
+│   └── report.html # Report form
 ├── static/
 │   └── style.css   # Layout and theme tweaks on top of Puppertino
 └── README.md
@@ -97,7 +115,7 @@ snipurlnk/
 - [x] Click counts (stored per link, no display yet)
 - [x] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
 - [x] Rate limiting per visitor
-- [ ] Report and remove links (admin key kept in an environment variable)
+- [x] Report and remove links
 - [ ] Move from SQLite to a free hosted database (Postgres)
 - [ ] Deploy on a free host
 - [ ] User accounts and a dashboard showing each person's links and click counts

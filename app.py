@@ -1,7 +1,5 @@
 from flask import Flask, request, redirect, render_template
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click   
-
-
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report   
 
 app = Flask(__name__)
 
@@ -44,6 +42,25 @@ def create_short_link():
 
     return result
 
+
+@app.route("/report")
+def report_page():
+    return render_template("report.html")
+
+@app.route("/report", methods=["POST"])
+@limiter.limit("5 per minute")
+@limiter.limit("20 per day")
+def submit_report():
+    link = request.form.get("link", "").strip()
+    reason = request.form.get("reason", "")
+
+    if not link:
+        return "Missing link", 400
+
+    if add_report(link, reason) is None:
+        return "Link not found", 404
+
+    return "Thanks, we'll review it."
 
 @app.route("/<code>")
 def follow_link(code):

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <title>Report a link - snipURlnk</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+
+    <body class="p-auto-dark-mode">
+        <main>
+            <h1>Report a link</h1>
+            <p>Paste the short link you want us to review.</p>
+            <input class="p-field" type="text" id="linkInput" placeholder="Short link or code" aria-label="Short link or code">
+            <input class="p-field" type="text" id="reasonInput" maxlength="200" placeholder="Reason (optional)" aria-label="Reason">
+            <button class="p-button p-button-primary" id="reportBtn">Report</button>
+            <div id="result" aria-live="polite"></div>
+            <p><a href="{{ url_for('home') }}">Back to snipURlnk</a></p>
+        </main>
+
+        <script>
+        const linkInput = document.getElementById("linkInput");
+        const reasonInput = document.getElementById("reasonInput");
+        const reportBtn = document.getElementById("reportBtn");
+        const result = document.getElementById("result");
+
+        reportBtn.addEventListener("click", async function () {
+            let response;
+            try {
+                response = await fetch("/report", {
+                    method: "POST",
+                    body: new URLSearchParams({ link: linkInput.value, reason: reasonInput.value })
+                });
+            } catch (error) {
+                result.className = "error";
+                result.textContent = "Network error";
+                return;
+            }
+
+            result.className = response.ok ? "" : "error";
+            result.textContent = await response.text();
+        });
+        </script>
+
+    </body>
+
+</html>

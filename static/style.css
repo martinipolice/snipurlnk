@@ -20,3 +20,5 @@ p { margin: 0 0 1.5rem; color: light-dark(#6E6E73, #98989D); }
 #result span { flex: 1; font-family: ui-monospace, "SF Mono", monospace; overflow-wrap: anywhere; }
 #result .p-button { width: auto; margin: 0; }
 #result.error { color: light-dark(#D70015, #FF453A); }
+
+main > p:last-child { margin-top: 2rem; }
