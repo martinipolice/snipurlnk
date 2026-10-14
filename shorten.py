@@ -59,6 +59,27 @@ def init_db(): # this initialize an SQLite to store the code-url pair
 
 init_db() # initialize it
 
+def init_pg_db():
+    with get_conn() as conn:
+        conn.execute("CREATE EXTENSION IF NOT EXISTS citext")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS links (
+                code CITEXT PRIMARY KEY,
+                url TEXT NOT NULL,
+                clicks INTEGER NOT NULL DEFAULT 0,
+                removed INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS reports (
+                id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                code CITEXT NOT NULL,
+                reason TEXT,
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """)
+
 def shorten(url, alias=None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
