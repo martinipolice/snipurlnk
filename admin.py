@@ -1,43 +1,37 @@
-import sqlite3
 import sys
 
-from shorten import DB_PATH
+from shorten import get_conn
 
 
 def list_reports():
-    conn = sqlite3.connect(DB_PATH)
-    rows = conn.execute("""
-        SELECT r.code, l.url, l.clicks, COUNT(*) AS n, MAX(r.created_at), GROUP_CONCAT(NULLIF(r.reason, ''), ' | ')
-        FROM reports r JOIN links l ON l.code = r.code
-        WHERE r.status = 'open' AND l.removed = 0
-        GROUP BY r.code
-        ORDER BY n DESC
-    """).fetchall()
-    conn.close()
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT r.code, l.url, l.clicks, COUNT(*) AS n, MAX(r.created_at), string_agg(NULLIF(r.reason, ''), ' | ')
+            FROM reports r JOIN links l ON l.code = r.code
+            WHERE r.status = 'open' AND l.removed = 0
+            GROUP BY r.code, l.url, l.clicks
+            ORDER BY n DESC
+        """).fetchall()
 
     if not rows:
         print("No open reports.")
     for code, url, clicks, n, last, reasons in rows:
         print(f"{code}  ->  {url}")
-        print(f"    {n} report(s), {clicks} click(s), latest {last}")
+        print(f"    {n} report(s), {clicks} click(s), latest {last:%Y-%m-%d %H:%M}")
         if reasons:
             print(f"    reasons: {reasons}")
 
 
 def remove(code):
-    conn = sqlite3.connect(DB_PATH)
-    changed = conn.execute("UPDATE links SET removed = 1 WHERE code = ?", (code,)).rowcount
-    conn.execute("UPDATE reports SET status = 'actioned' WHERE code = ? AND status = 'open'", (code,))
-    conn.commit()
-    conn.close()
+    with get_conn() as conn:
+        changed = conn.execute("UPDATE links SET removed = 1 WHERE code = %s", (code,)).rowcount
+        conn.execute("UPDATE reports SET status = 'actioned' WHERE code = %s AND status = 'open'", (code,))
     print(f"Removed {code}." if changed else f"No link with code {code}.")
 
 
 def dismiss(code):
-    conn = sqlite3.connect(DB_PATH)
-    changed = conn.execute("UPDATE reports SET status = 'dismissed' WHERE code = ? AND status = 'open'", (code,)).rowcount
-    conn.commit()
-    conn.close()
+    with get_conn() as conn:
+        changed = conn.execute("UPDATE reports SET status = 'dismissed' WHERE code = %s AND status = 'open'", (code,)).rowcount
     print(f"Dismissed {changed} report(s) for {code}.")
 
 

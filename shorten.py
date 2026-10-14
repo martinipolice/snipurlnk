@@ -81,42 +81,30 @@ def init_pg_db():
         """)
 
 def shorten(url, alias=None):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    # if there is an alias, ...
-    if alias:
+    with get_conn() as conn:
+        # if there is an alias, try it once
+        if alias:
             try:
-                cursor.execute("INSERT INTO links (code, url) VALUES (?, ?)", (alias, url))
-                conn.commit()
-                conn.close()
-                return alias            
-            except sqlite3.IntegrityError:
-                conn.close()
-                return None             
+                conn.execute("INSERT INTO links (code, url) VALUES (%s, %s)", (alias, url))
+                return alias
+            except psycopg.errors.UniqueViolation:
+                conn.rollback()
+                return None
 
-    # no alias
-    characterPool = string.ascii_letters + string.digits # char pool of letters and nums
-    while True:
-        random_code = ''.join(random.choices(characterPool, k=6)) # generate a random 6-char code
+        # no alias
+        characterPool = string.ascii_letters + string.digits # char pool of letters and nums
+        while True:
+            random_code = ''.join(random.choices(characterPool, k=6)) # generate a random 6-char code
 
-        try: # a try-catch to catch integrity error
-            cursor.execute("INSERT INTO links (code, url) VALUES (?, ?)", (random_code, url))
-            conn.commit()
-            conn.close()
-            return random_code
-        
-        except sqlite3.IntegrityError: # this ensures there is no dupes
-            pass # pass if the code is alr a dupe, so it tries again
+            try:
+                conn.execute("INSERT INTO links (code, url) VALUES (%s, %s)", (random_code, url))
+                return random_code
+            except psycopg.errors.UniqueViolation: # this ensures there is no dupes
+                conn.rollback() # clear the failed transaction, then try a new code
 
 def expand(code):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT url FROM links WHERE code = ? AND removed = 0", (code,)) # this get the url from that specific code
-    result = cursor.fetchone() # this fetches that url
-    
-    conn.close()
+    with get_conn() as conn:
+        result = conn.execute("SELECT url FROM links WHERE code = %s AND removed = 0", (code,)).fetchone()
 
     if result is not None:
         return result[0] # return the url
@@ -141,10 +129,8 @@ def normalize_url(url): # this normalizes the url if it does not have http/https
     return "https://" + url
 
 def record_click(code): # this adds click count
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("UPDATE links SET clicks = clicks + 1 WHERE code = ?", (code,))
-    conn.commit()
-    conn.close()
+    with get_conn() as conn:
+        conn.execute("UPDATE links SET clicks = clicks + 1 WHERE code = %s", (code,))
 
 def extract_code(text): # takes a short link or a bare code, and returns the code (or None)
     code = text.strip().split("?")[0].split("#")[0].rstrip("/").split("/")[-1]
@@ -157,13 +143,10 @@ def add_report(text, reason): # saves a report and returns the code, or None if 
 
     reason = "".join(ch for ch in reason if ch.isprintable())[:200]
 
-    conn = sqlite3.connect(DB_PATH)
-    row = conn.execute("SELECT code FROM links WHERE code = ? AND removed = 0", (code,)).fetchone()
-    if row is None:
-        conn.close()
-        return None
+    with get_conn() as conn:
+        row = conn.execute("SELECT code FROM links WHERE code = %s AND removed = 0", (code,)).fetchone()
+        if row is None:
+            return None
+        conn.execute("INSERT INTO reports (code, reason) VALUES (%s, %s)", (row[0], reason))
 
-    conn.execute("INSERT INTO reports (code, reason) VALUES (?, ?)", (row[0], reason))
-    conn.commit()
-    conn.close()
     return row[0]
