@@ -4,8 +4,15 @@ import sqlite3
 import os
 import re
 from urllib.parse import urlparse
+import psycopg
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "links.db")
+
+def get_conn():
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("DATABASE_URL is not set")
+    return psycopg.connect(url, connect_timeout=15)
 
 RESERVED_ALIASES = { # these are the reserved alias
        "undefined", "root", "report", "reports", "shorten", "static", "api", 
