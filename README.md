@@ -6,14 +6,14 @@
 --  ------------------------------------
 ```
 
-A URL shortener built with Python, Flask, and SQLite. I'm building it as a learning project, one step at a time.
+A URL shortener built with Python, Flask, and Postgres (hosted on Neon). I'm building it as a learning project, one step at a time.
 
 ## Features
 
 - Shorten any URL into a random 6-character code
 - Optional custom aliases (3 to 30 characters: letters, digits, `-` and `_`), case-insensitive, with a list of reserved words
 - Redirect from the short link to the original URL
-- Links are stored in SQLite, so they survive server restarts
+- Links are stored in a hosted Postgres database, so they survive server restarts and redeploys
 - Collision-safe code generation: a taken code is never overwritten
 - URL validation: only `http` and `https` links with a real domain are accepted, and bad ports, spaces, control characters, and URLs over 2,048 characters are rejected
 - Auto-fixes missing schemes (`example.com` becomes `https://example.com`)
@@ -32,7 +32,7 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 2. The server cleans up the URL: it trims whitespace and adds `https://` if no scheme is given.
 3. It validates the URL. The scheme must be `http` or `https`, the hostname must contain a dot, and the URL must be printable, free of spaces, have a valid port, and be at most 2,048 characters. Anything else is rejected with a `400`.
 4. If an alias was given, it must match the allowed pattern and not be a reserved word (like `admin` or `login`), or the server returns a `400`.
-5. The server saves the pair `code -> URL` in a SQLite table.
+5. The server saves the pair `code -> URL` in a Postgres table.
    - With an alias, it tries to insert that code once. If it's taken, the server returns a `409`.
    - Without one, it generates a random code and retries with a new one if there's a collision.
 6. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown or removed codes return a `404` and change nothing.
@@ -40,13 +40,18 @@ A URL shortener built with Python, Flask, and SQLite. I'm building it as a learn
 ### Design decisions
 
 - **One link per submission:** submitting the same URL twice creates two different short links. This keeps each person's link independent, and it makes per-link features (like click counts) possible later.
-- **Case-insensitive codes:** the `code` column uses `COLLATE NOCASE`, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
+- **Case-insensitive codes:** the `code` column uses Postgres's `citext` type, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
 - **Click counts include all redirects:** every successful visit to a short link adds 1, including automated ones like link previews and prefetches. Filtering these out is a possible later improvement.
 - **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
 
 ## Getting started
 
 **Requirements:** Python 3.
+
+**Database:** create a free Postgres database at [Neon](https://neon.com), copy its connection string, and set it as `DATABASE_URL`. Never commit it, because it contains the database password.
+
+- Windows PowerShell: `$env:DATABASE_URL = 'postgresql://...'`
+- macOS or Linux: `export DATABASE_URL='postgresql://...'`
 
 ```bash
 git clone https://github.com/martinipolice/snipurlnk.git
@@ -55,7 +60,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Then open http://127.0.0.1:5000 in your browser. The database file (`links.db`) is created automatically on first run. The page loads its stylesheet from a CDN, so it needs an internet connection to look styled.
+Then open http://127.0.0.1:5000 in your browser. The tables are created automatically on first run. The first request after the database has been idle can take a few seconds while it wakes up. The page loads its stylesheet from a CDN, so it needs an internet connection to look styled.
 
 **Auto-reload while developing:** debug mode is off by default. Turn it on before starting the server:
 
@@ -89,7 +94,7 @@ Removed links stay in the database, so their codes can't be registered again.
 ```
 snipurlnk/
 ├── app.py          # Flask routes
-├── shorten.py      # URL and alias validation, code generation, SQLite storage
+├── shorten.py      # URL and alias validation, code generation, Postgres storage
 ├── admin.py        # Review reports and remove links from the terminal
 ├── templates/
 │   ├── index.html  # Front end and page script
@@ -116,11 +121,11 @@ snipurlnk/
 - [x] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
 - [x] Rate limiting per visitor
 - [x] Report and remove links
-- [ ] Move from SQLite to a free hosted database (Postgres)
+- [x] Move from SQLite to a free hosted database (Postgres)
 - [ ] Deploy on a free host
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
 ## What I'm learning
 
-Flask routing, HTTP status codes and redirects, SQL basics, input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow.
+Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow.
