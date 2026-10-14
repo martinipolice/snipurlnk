@@ -4,3 +4,4 @@ venv/
 .venv/
 .env
 *.db
+.env.*

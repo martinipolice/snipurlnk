@@ -1,12 +1,9 @@
 import random
 import string
-import sqlite3
 import os
 import re
 from urllib.parse import urlparse
 import psycopg
-
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "links.db")
 
 def get_conn():
     url = os.environ.get("DATABASE_URL")
@@ -26,40 +23,7 @@ def is_valid_alias(alias): # checks if there is consistency and no words from th
     not_reserved = alias.lower() not in RESERVED_ALIASES
     return bool(good_pattern) and not_reserved
 
-def init_db(): # this initialize an SQLite to store the code-url pair
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS links (
-            code TEXT PRIMARY KEY COLLATE NOCASE,
-            url TEXT NOT NULL,
-            clicks INTEGER NOT NULL DEFAULT 0,
-            removed INTEGER NOT NULL DEFAULT 0
-        )
-    """)
-
-    # an older links table has no "removed" column, and CREATE TABLE IF NOT EXISTS won't add it
-    columns = [row[1] for row in cursor.execute("PRAGMA table_info(links)")]
-    if "removed" not in columns:
-        cursor.execute("ALTER TABLE links ADD COLUMN removed INTEGER NOT NULL DEFAULT 0")
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT NOT NULL COLLATE NOCASE,
-            reason TEXT,
-            status TEXT NOT NULL DEFAULT 'open',
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-init_db() # initialize it
-
-def init_pg_db():
+def init_db():
     with get_conn() as conn:
         conn.execute("CREATE EXTENSION IF NOT EXISTS citext")
         conn.execute("""
@@ -79,6 +43,8 @@ def init_pg_db():
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )
         """)
+
+init_db() # create the tables in Postgres if they don't exist yet
 
 def shorten(url, alias=None):
     with get_conn() as conn:
