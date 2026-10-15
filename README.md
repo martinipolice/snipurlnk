@@ -25,6 +25,7 @@ A URL shortener built with Python, Flask, and Postgres (hosted on Neon). I'm bui
 - Counts how many times each short link is visited (stored, not displayed yet)
 - Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
 - Report a link from the page, and review and remove reported links with admin commands
+- Automated pytest suite covering validation, the database code, and the web routes, run against a separate test database
 
 ## How it works
 
@@ -89,18 +90,53 @@ python admin.py dismiss <code>   # clear reports for a link you decided to keep
 
 Removed links stay in the database, so their codes can't be registered again.
 
+## Running the tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+The validation and text-helper tests need no database, so they run on their own in a fraction of a second:
+
+```bash
+python -m pytest -q tests/test_validation.py tests/test_text_helpers.py
+```
+
+The database and route tests need a separate test database. Without one, they skip themselves.
+
+1. In Neon, create a branch of your database (for example `test`) and copy its connection string.
+2. Set it as `TEST_DATABASE_URL`. This is a different variable from `DATABASE_URL`:
+   - Windows PowerShell: `$env:TEST_DATABASE_URL = 'postgresql://...'`
+   - macOS or Linux: `export TEST_DATABASE_URL='postgresql://...'`
+3. Mark that database as a test database, once, in Neon's SQL Editor or any Postgres client:
+   ```sql
+   CREATE TABLE IF NOT EXISTS i_am_a_test_database (id INTEGER);
+   ```
+
+The tests empty the `links` and `reports` tables before every test, so they have three safety checks. They skip if `TEST_DATABASE_URL` is missing, they refuse to run if it matches `DATABASE_URL`, and they refuse to delete anything unless the `i_am_a_test_database` table exists. Never create that table in your real database.
+
 ## Project structure
 
 ```
 snipurlnk/
-├── app.py          # Flask routes
-├── shorten.py      # URL and alias validation, code generation, Postgres storage
-├── admin.py        # Review reports and remove links from the terminal
+├── app.py                    # Flask routes
+├── shorten.py                # URL and alias validation, code generation, Postgres storage
+├── admin.py                  # Review reports and remove links from the terminal
 ├── templates/
-│   ├── index.html  # Front end and page script
-│   └── report.html # Report form
+│   ├── index.html            # Front end and page script
+│   └── report.html           # Report form
 ├── static/
-│   └── style.css   # Layout and theme tweaks on top of Puppertino
+│   └── style.css             # Layout and theme tweaks on top of Puppertino
+├── tests/
+│   ├── conftest.py           # Test database fixture and its safety checks
+│   ├── test_validation.py    # URL validation
+│   ├── test_text_helpers.py  # URL normalizing, aliases, code extraction
+│   ├── test_database.py      # Database code against the test database
+│   └── test_routes.py        # Web routes, redirects, and rate limits
+├── pytest.ini                # pytest settings
+├── requirements.txt          # What the app needs to run
+├── requirements-dev.txt      # Adds the test tools
 └── README.md
 ```
 
@@ -122,10 +158,11 @@ snipurlnk/
 - [x] Rate limiting per visitor
 - [x] Report and remove links
 - [x] Move from SQLite to a free hosted database (Postgres)
+- [x] Automated tests with pytest, using a separate test database
 - [ ] Deploy on a free host
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
 ## What I'm learning
 
-Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow.
+Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow.
