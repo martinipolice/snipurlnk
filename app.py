@@ -1,7 +1,9 @@
 from flask import Flask, request, redirect, render_template
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report   
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db  
 
 app = Flask(__name__)
+
+init_db() # make sure the tables exist before serving requests
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address

@@ -44,8 +44,6 @@ def init_db():
             )
         """)
 
-init_db() # create the tables in Postgres if they don't exist yet
-
 def shorten(url, alias=None):
     with get_conn() as conn:
         # if there is an alias, try it once

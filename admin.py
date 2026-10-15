@@ -1,6 +1,6 @@
 import sys
 
-from shorten import get_conn
+from shorten import get_conn, init_db
 
 
 def list_reports():
@@ -36,6 +36,7 @@ def dismiss(code):
 
 
 if __name__ == "__main__":
+    init_db()
     args = sys.argv[1:]
     if args == ["reports"]:
         list_reports()
