@@ -141,3 +141,23 @@ def test_limit_message_is_friendly(client):
         client.post("/shorten", data={})
     response = client.post("/shorten", data={})
     assert text(response) == "Too many requests. Please wait a minute and try again."
+
+    # ---- the visitor's address behind Render's proxies ----
+# Render adds 3 addresses to the end of X-Forwarded-For, and the app trusts those 3.
+# Anything a visitor sends is further left, so it can't change who the limiter sees.
+
+def post_empty(client, forwarded_for):
+    return client.post("/shorten", data={}, headers={"X-Forwarded-For": forwarded_for})
+
+
+def test_each_visitor_gets_their_own_limit(client):
+    for _ in range(10):
+        post_empty(client, "9.9.9.1, 10.0.0.1, 10.0.0.2")
+    assert post_empty(client, "9.9.9.1, 10.0.0.1, 10.0.0.2").status_code == 429
+    assert post_empty(client, "9.9.9.2, 10.0.0.1, 10.0.0.2").status_code == 400
+
+
+def test_a_faked_forwarded_header_cannot_dodge_the_limit(client):
+    for i in range(10):
+        post_empty(client, f"1.1.1.{i}, 9.9.9.1, 10.0.0.1, 10.0.0.2")
+    assert post_empty(client, "1.1.1.99, 9.9.9.1, 10.0.0.1, 10.0.0.2").status_code == 429
