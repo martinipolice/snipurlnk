@@ -64,6 +64,13 @@ def submit_report():
 
     return "Thanks, we'll review it."
 
+@app.route("/debug-headers")
+def debug_headers():
+    names = ["X-Forwarded-For", "X-Forwarded-Proto", "X-Real-IP", "True-Client-IP", "CF-Connecting-IP", "Forwarded"]
+    lines = [f"remote_addr: {request.remote_addr}"]
+    lines += [f"{name}: {request.headers.get(name)}" for name in names]
+    return "\n".join(lines), 200, {"Content-Type": "text/plain"}
+
 @app.route("/<code>")
 def follow_link(code):
     
