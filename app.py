@@ -1,7 +1,12 @@
 from flask import Flask, request, redirect, render_template
 from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db  
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+
+# Render puts 3 proxy addresses in X-Forwarded-For. Trust exactly those 3, so a
+# visitor can't fake their address by sending their own header.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=3)
 
 init_db() # make sure the tables exist before serving requests
 
