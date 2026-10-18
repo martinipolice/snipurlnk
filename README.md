@@ -8,6 +8,12 @@
 
 A URL shortener built with Python, Flask, and Postgres (hosted on Neon). I'm building it as a learning project, one step at a time.
 
+## Live demo
+
+https://snipurlnk.onrender.com
+
+It runs on Render's free plan, which puts the app to sleep after 15 minutes without visitors. The first visit after a sleep takes about 30 seconds to wake it up (I measured 32.5 s; Render says it can take up to a minute). After that, pages load in under a second.
+
 ## Features
 
 - Shorten any URL into a random 6-character code
@@ -44,6 +50,15 @@ A URL shortener built with Python, Flask, and Postgres (hosted on Neon). I'm bui
 - **Case-insensitive codes:** the `code` column uses Postgres's `citext` type, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
 - **Click counts include all redirects:** every successful visit to a short link adds 1, including automated ones like link previews and prefetches. Filtering these out is a possible later improvement.
 - **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
+
+## How it is deployed
+
+- **Host:** Render free web service (Singapore region), started with `gunicorn app:app`
+- **Database:** Neon Postgres, in a separate project from the one I develop against
+- **Settings:** `DATABASE_URL` is set on Render's Environment page, never in the code
+- **Python version:** pinned in `.python-version`
+- **Deploys:** manual, only after the tests pass
+- **Visitor address:** Render adds three addresses to `X-Forwarded-For`, so the app trusts exactly three (`ProxyFix(x_for=3)`). I measured this on the live site, and a test checks that a faked header can't get around the rate limit.
 
 ## Getting started
 
@@ -135,6 +150,7 @@ snipurlnk/
 │   ├── test_database.py      # Database code against the test database
 │   └── test_routes.py        # Web routes, redirects, and rate limits
 ├── pytest.ini                # pytest settings
+├── .python-version           # Python version used on Render
 ├── requirements.txt          # What the app needs to run
 ├── requirements-dev.txt      # Adds the test tools
 └── README.md
@@ -159,10 +175,10 @@ snipurlnk/
 - [x] Report and remove links
 - [x] Move from SQLite to a free hosted database (Postgres)
 - [x] Automated tests with pytest, using a separate test database
-- [ ] Deploy on a free host
+- [x] Deploy on a free host (Render + Neon)
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
 ## What I'm learning
 
-Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow.
+Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow, deploying to Render with gunicorn, and how proxies hide the visitor's address (and why a rate limiter must not trust a header the visitor can fake).
