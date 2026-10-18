@@ -29,6 +29,7 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 - Styled with [Puppertino](https://github.com/codedgar/Puppertino), loaded from the jsDelivr CDN
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
 - Counts how many times each short link is visited (stored, not displayed yet)
+- Every new link is checked against Google Safe Browsing, and links flagged as malware, phishing, or unwanted software are refused. If Google can't be reached, links are allowed through
 - Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
 - Report a link from the page, and review and remove reported links with admin commands
 - Automated pytest suite covering validation, the database code, and the web routes, run against a separate test database
@@ -39,23 +40,27 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 2. The server cleans up the URL: it trims whitespace and adds `https://` if no scheme is given.
 3. It validates the URL. The scheme must be `http` or `https`, the hostname must contain a dot, and the URL must be printable, free of spaces, have a valid port, and be at most 2,048 characters. Anything else is rejected with a `400`.
 4. If an alias was given, it must match the allowed pattern and not be a reserved word (like `admin` or `login`), or the server returns a `400`.
-5. The server saves the pair `code -> URL` in a Postgres table.
+5. The server asks Google Safe Browsing whether the URL is dangerous. If it is, the server refuses it with a `400` and saves nothing. If Google can't be reached within 3 seconds, the link is allowed through and a warning is logged.
+6. The server saves the pair `code -> URL` in a Postgres table.
    - With an alias, it tries to insert that code once. If it's taken, the server returns a `409`.
    - Without one, it generates a random code and retries with a new one if there's a collision.
-6. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown or removed codes return a `404` and change nothing.
+7. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown or removed codes return a `404` and change nothing.
 
 ### Design decisions
 
 - **One link per submission:** submitting the same URL twice creates two different short links. This keeps each person's link independent, and it makes per-link features (like click counts) possible later.
 - **Case-insensitive codes:** the `code` column uses Postgres's `citext` type, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
 - **Click counts include all redirects:** every successful visit to a short link adds 1, including automated ones like link previews and prefetches. Filtering these out is a possible later improvement.
+- **Fail open on Google outages:** if Safe Browsing can't be reached, new links are still created, because I'd rather keep the site usable than block everyone during a Google problem. The risk is that a bad link could slip through during an outage, so failures are logged.
+- **Checked once, when the link is created:** a site that turns bad later is not caught. Checking on every visit would slow redirects and use up the API quota.
+- **Privacy:** every submitted URL is sent to Google for checking.
 - **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
 
 ## How it is deployed
 
 - **Host:** Render free web service (Singapore region), started with `gunicorn app:app`
 - **Database:** Neon Postgres, in a separate project from the one I develop against
-- **Settings:** `DATABASE_URL` is set on Render's Environment page, never in the code
+- **Settings:** `DATABASE_URL` and `SAFE_BROWSING_API_KEY` are set on Render's Environment page, never in the code
 - **Python version:** pinned in `.python-version`
 - **Deploys:** manual, only after the tests pass
 - **Visitor address:** Render adds three addresses to `X-Forwarded-For`, so the app trusts exactly three (`ProxyFix(x_for=3)`). I measured this on the live site, and a test checks that a faked header can't get around the rate limit.
@@ -76,6 +81,8 @@ pip install -r requirements.txt
 python app.py
 ```
 
+**Safe Browsing (optional):** to turn on the link safety check, create an API key for the Safe Browsing API in Google Cloud Console, restrict it to that API, and set it as `SAFE_BROWSING_API_KEY` (same way as `DATABASE_URL`). Without it, links are not checked and a warning is logged. Google's terms limit this API to non-commercial use.
+
 Then open http://127.0.0.1:5000 in your browser. The tables are created automatically on first run. The first request after the database has been idle can take a few seconds while it wakes up. The page loads its stylesheet from a CDN, so it needs an internet connection to look styled.
 
 **Auto-reload while developing:** debug mode is off by default. Turn it on before starting the server:
@@ -88,7 +95,7 @@ Then open http://127.0.0.1:5000 in your browser. The tables are created automati
 | Route | Description |
 |-------|-------------|
 | `/` | Web page with the shortener form |
-| `POST /shorten` | Creates a short link from the form fields `url` and optional `alias`, and returns the code. Returns `400` for a missing or invalid URL or alias, and `409` if the alias is taken |
+| `POST /shorten` | Creates a short link from the form fields `url` and optional `alias`, and returns the code. Returns `400` for a missing or invalid URL or alias, and `409` if the alias is taken. Also returns `400` if Google Safe Browsing flags the URL |
 | `GET /report` | Page with a form to report a short link |
 | `POST /report` | Saves a report from the form fields `link` (a short link or code) and optional `reason`. Returns `404` if the link doesn't exist. Rate limited |
 | `/<code>` | Redirects to the original URL (`404` if the code doesn't exist or was removed) |
@@ -118,7 +125,7 @@ The validation and text-helper tests need no database, so they run on their own 
 python -m pytest -q tests/test_validation.py tests/test_text_helpers.py
 ```
 
-The database and route tests need a separate test database. Without one, they skip themselves.
+The Safe Browsing tests use a fake network, so they never contact Google or need an API key. The database and route tests need a separate test database. Without one, they skip themselves.
 
 1. In Neon, create a branch of your database (for example `test`) and copy its connection string.
 2. Set it as `TEST_DATABASE_URL`. This is a different variable from `DATABASE_URL`:
@@ -137,6 +144,7 @@ The tests empty the `links` and `reports` tables before every test, so they have
 snipurlnk/
 ├── app.py                    # Flask routes
 ├── shorten.py                # URL and alias validation, code generation, Postgres storage
+├── safety.py                 # Google Safe Browsing check
 ├── admin.py                  # Review reports and remove links from the terminal
 ├── templates/
 │   ├── index.html            # Front end and page script
@@ -147,6 +155,7 @@ snipurlnk/
 │   ├── conftest.py           # Test database fixture and its safety checks
 │   ├── test_validation.py    # URL validation
 │   ├── test_text_helpers.py  # URL normalizing, aliases, code extraction
+│   ├── test_safety.py        # Safe Browsing check with a fake network
 │   ├── test_database.py      # Database code against the test database
 │   └── test_routes.py        # Web routes, redirects, and rate limits
 ├── pytest.ini                # pytest settings
@@ -176,6 +185,7 @@ snipurlnk/
 - [x] Move from SQLite to a free hosted database (Postgres)
 - [x] Automated tests with pytest, using a separate test database
 - [x] Deploy on a free host (Render + Neon)
+- [x] Safe Browsing check on new links
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
