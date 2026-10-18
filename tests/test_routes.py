@@ -161,3 +161,31 @@ def test_a_faked_forwarded_header_cannot_dodge_the_limit(client):
     for i in range(10):
         post_empty(client, f"1.1.1.{i}, 9.9.9.1, 10.0.0.1, 10.0.0.2")
     assert post_empty(client, "1.1.1.99, 9.9.9.1, 10.0.0.1, 10.0.0.2").status_code == 429
+
+# ---- the Safe Browsing check ----
+
+def test_flagged_url_is_refused_and_not_stored(client, monkeypatch):
+    monkeypatch.setattr("app.is_flagged", lambda url: True)
+
+    def must_not_run(*args, **kwargs):
+        raise AssertionError("shorten() was called for a flagged URL")
+
+    monkeypatch.setattr("app.shorten", must_not_run)
+    response = client.post("/shorten", data={"url": "https://bad.example"})
+    assert response.status_code == 400
+    assert b"unsafe" in response.data
+
+
+def test_safe_browsing_sees_the_cleaned_up_url(client, monkeypatch):
+    seen = []
+    monkeypatch.setattr("app.is_flagged", lambda url: seen.append(url) or False)
+    client.post("/shorten", data={"url": "  example.com  "})
+    assert seen == ["https://example.com"]
+
+
+def test_invalid_input_never_reaches_safe_browsing(client, monkeypatch):
+    seen = []
+    monkeypatch.setattr("app.is_flagged", lambda url: seen.append(url) or False)
+    client.post("/shorten", data={"url": "https://localhost"})
+    client.post("/shorten", data={"url": "https://example.com", "alias": "a b"})
+    assert seen == []

@@ -1,6 +1,7 @@
 from flask import Flask, request, redirect, render_template
 from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db  
 from werkzeug.middleware.proxy_fix import ProxyFix
+from safety import is_flagged
 
 app = Flask(__name__)
 
@@ -41,6 +42,9 @@ def create_short_link():
 
     if alias and not is_valid_alias(alias):  # the alias is not valid
         return "Invalid alias", 400
+
+    if is_flagged(url):
+        return "This link was flagged as unsafe by Google Safe Browsing, so it can't be shortened.", 400
 
     result = shorten(url, alias or None)
 
