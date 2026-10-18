@@ -204,3 +204,9 @@ def test_unknown_page_also_gets_the_friendly_404(client):
     response = client.get("/some/made/up/path")
     assert response.status_code == 404
     assert b"Link not found" in response.data
+
+def test_home_page_has_the_qr_popup_and_a_pinned_library(client):
+    page = client.get("/").data
+    assert b'id="qrDialog"' in page
+    assert b"qrcode-generator@1.4.4" in page
+    assert b'integrity="sha256-' in page

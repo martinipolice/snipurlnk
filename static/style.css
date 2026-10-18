@@ -31,3 +31,35 @@ main > p:last-child { margin-top: 2rem; }
     clip: rect(0 0 0 0);
     white-space: nowrap;
 }
+
+dialog {
+    width: calc(100% - 2rem);
+    max-width: 22rem;
+    box-sizing: border-box;
+    padding: 1.5rem;
+    border: 0;
+    border-radius: 1rem;
+    background: light-dark(#FFFFFF, #1C1C1E);
+    color: light-dark(#1D1D1F, #F5F5F7);
+}
+
+dialog::backdrop { background: rgb(0 0 0 / .6); }
+dialog h2 { margin: 0 0 1rem; font-size: 1.25rem; }
+
+#qrCanvas {
+    display: block;
+    width: 100%;
+    max-width: 16rem;
+    height: auto;
+    margin: 0 auto 1rem;
+    border-radius: .5rem;
+}
+
+#qrLink {
+    margin-bottom: 1rem;
+    font-family: ui-monospace, "SF Mono", monospace;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+#qrMessage { margin: .25rem 0 0; min-height: 1.5rem; }
