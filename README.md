@@ -28,6 +28,8 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 - Light and dark themes that follow the device setting
 - Styled with [Puppertino](https://github.com/codedgar/Puppertino), loaded from the jsDelivr CDN
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
+- QR code popup for each new short link, with Download PNG, Share, and Copy link buttons
+- Friendly 404 page for unknown or removed links, with a countdown back to the home page that can be stopped, and a link to report a link
 - Counts how many times each short link is visited (stored, not displayed yet)
 - Every new link is checked against Google Safe Browsing, and links flagged as malware, phishing, or unwanted software are refused. If Google can't be reached, links are allowed through
 - Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
@@ -54,6 +56,8 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 - **Fail open on Google outages:** if Safe Browsing can't be reached, new links are still created, because I'd rather keep the site usable than block everyone during a Google problem. The risk is that a bad link could slip through during an outage, so failures are logged.
 - **Checked once, when the link is created:** a site that turns bad later is not caught. Checking on every visit would slow redirects and use up the API quota.
 - **Privacy:** every submitted URL is sent to Google for checking.
+- **QR codes are made in the browser:** a small library (`qrcode-generator`, pinned to one version with an integrity hash, loaded from jsDelivr) draws the code, so the server does no extra work and has no extra public routes. If the library can't load, the QR button simply doesn't appear. Codes are always black on white, because inverted codes fail in many scanners.
+- **The 404 countdown can be stopped:** a page that moves you away on a timer can lock out slow readers and screen-reader users, so there is a Stop button, a plain "go now" link, and a quiet announcement for screen readers instead of one per second.
 - **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
 
 ## How it is deployed
@@ -147,7 +151,8 @@ snipurlnk/
 ├── safety.py                 # Google Safe Browsing check
 ├── admin.py                  # Review reports and remove links from the terminal
 ├── templates/
-│   ├── index.html            # Front end and page script
+│   ├── index.html            # Front end, page script, and the QR popup
+│   ├── 404.html              # Friendly "link not found" page
 │   └── report.html           # Report form
 ├── static/
 │   └── style.css             # Layout and theme tweaks on top of Puppertino
@@ -186,9 +191,11 @@ snipurlnk/
 - [x] Automated tests with pytest, using a separate test database
 - [x] Deploy on a free host (Render + Neon)
 - [x] Safe Browsing check on new links
+- [x] Custom 404 page with a stoppable countdown
+- [x] QR code popup
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
 ## What I'm learning
 
-Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow, deploying to Render with gunicorn, and how proxies hide the visitor's address (and why a rate limiter must not trust a header the visitor can fake).
+Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow, deploying to Render with gunicorn, accessible dialogs and countdowns, pinning third-party scripts with integrity hashes, and how proxies hide the visitor's address (and why a rate limiter must not trust a header the visitor can fake).
