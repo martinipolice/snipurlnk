@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <title>Link not found - snipURlnk</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+
+    <body class="p-auto-dark-mode">
+        <main>
+            <h1>Link not found</h1>
+            <p>This link doesn't exist, or it was removed.</p>
+
+            <p id="countdownStatus" class="visually-hidden" role="status"></p>
+            <div id="countdown"></div>
+
+            <p><a id="homeLink" href="{{ url_for('home') }}">Go to snipURlnk now</a></p>
+            <p><a href="/report">Report a link</a></p>
+        </main>
+
+        <script>
+        const START_SECONDS = 10;
+        const countdown = document.getElementById("countdown");
+        const countdownStatus = document.getElementById("countdownStatus");
+        const homeLink = document.getElementById("homeLink");
+
+        let secondsLeft = START_SECONDS;
+
+        const countdownText = document.createElement("p");
+        countdownText.setAttribute("aria-hidden", "true");
+
+        const stopButton = document.createElement("button");
+        stopButton.type = "button";
+        stopButton.className = "p-button";
+        stopButton.textContent = "Stop countdown";
+
+        countdown.append(countdownText, stopButton);
+        countdownStatus.textContent = "You will be taken to the home page in " + START_SECONDS +
+            " seconds. Use the Stop countdown button to stay on this page.";
+
+        function showSeconds() {
+            countdownText.textContent = "Taking you to the home page in " + secondsLeft + " seconds...";
+        }
+        showSeconds();
+
+        const timer = setInterval(function () {
+            secondsLeft -= 1;
+            if (secondsLeft <= 0) {
+                clearInterval(timer);
+                window.location.href = homeLink.href;
+                return;
+            }
+            showSeconds();
+        }, 1000);
+
+        stopButton.addEventListener("click", function () {
+            clearInterval(timer);
+            countdownText.removeAttribute("aria-hidden");
+            countdownText.textContent = "Countdown stopped. You can stay on this page.";
+            stopButton.remove();
+            countdownStatus.textContent = "";
+            homeLink.focus();
+        });
+        </script>
+
+    </body>
+
+</html>

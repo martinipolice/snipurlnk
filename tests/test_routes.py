@@ -84,7 +84,7 @@ def test_get_shorten_does_not_create_anything(client):
 def test_unknown_code_is_404(client):
     response = client.get("/nope123")
     assert response.status_code == 404
-    assert text(response) == "Link not found"
+    assert b"Link not found" in response.data
 
 
 def test_visit_redirects_and_counts_a_click_ignoring_case(client):
@@ -189,3 +189,18 @@ def test_invalid_input_never_reaches_safe_browsing(client, monkeypatch):
     client.post("/shorten", data={"url": "https://localhost"})
     client.post("/shorten", data={"url": "https://example.com", "alias": "a b"})
     assert seen == []
+
+# ---- the custom 404 page ----
+
+def test_unknown_code_shows_the_friendly_404_page(client):
+    response = client.get("/doesnotexist")
+    assert response.status_code == 404
+    assert b"Link not found" in response.data
+    assert b'href="/report"' in response.data
+    assert b'href="/"' in response.data
+
+
+def test_unknown_page_also_gets_the_friendly_404(client):
+    response = client.get("/some/made/up/path")
+    assert response.status_code == 404
+    assert b"Link not found" in response.data

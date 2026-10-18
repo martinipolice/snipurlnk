@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, abort
 from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db  
 from werkzeug.middleware.proxy_fix import ProxyFix
 from safety import is_flagged
@@ -79,7 +79,7 @@ def follow_link(code):
     link = expand(code) 
    
     if link is None:
-        return "Link not found", 404
+        abort(404)
 
     record_click(code)
     return redirect(link)
@@ -87,6 +87,10 @@ def follow_link(code):
 @app.errorhandler(429)
 def too_many_requests(error):
     return "Too many requests. Please wait a minute and try again.", 429
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template("404.html"), 404
 
 if __name__ == "__main__":
     app.run()
