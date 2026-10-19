@@ -1,12 +1,25 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
 
     <head>
         <title>snipURlnk</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+        <meta name="description" content="Paste a long link, get a short one. Free, with custom aliases and QR codes.">
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="snipURlnk">
+        <meta property="og:title" content="snipURlnk: shorten and share">
+        <meta property="og:description" content="A free link shortener with custom aliases, QR codes and a link safety check.">
+        <meta property="og:url" content="{{ url_for('home', _external=True) }}">
+        <meta property="og:image" content="{{ url_for('static', filename='share.png', _external=True) }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="snipURlnk">
+        <meta name="twitter:card" content="summary_large_image">
     </head>
 
     <body class="p-auto-dark-mode">

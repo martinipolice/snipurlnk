@@ -210,3 +210,18 @@ def test_home_page_has_the_qr_popup_and_a_pinned_library(client):
     assert b'id="qrDialog"' in page
     assert b"qrcode-generator@1.4.4" in page
     assert b'integrity="sha256-' in page
+
+def test_favicon_and_share_preview_are_wired_up(client):
+    import re
+
+    home = client.get("/").data
+    assert b'rel="icon"' in home
+    match = re.search(rb'property="og:image" content="([^"]+)"', home)
+    assert match and match.group(1).startswith(b"http")
+    assert b'lang="en"' in home
+
+    assert b'rel="icon"' in client.get("/report").data
+    assert b'rel="icon"' in client.get("/nothere").data
+
+    assert client.get("/static/favicon.png").status_code == 200
+    assert client.get("/static/share.png").status_code == 200
