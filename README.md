@@ -14,6 +14,16 @@ https://snipurlnk.onrender.com
 
 It runs on Render's free plan, which puts the app to sleep after 15 minutes without visitors. The first visit after a sleep takes about 30 seconds to wake it up (I measured 32.5 s; Render says it can take up to a minute). After that, pages load in under a second.
 
+## Screenshots
+
+| Light | Dark |
+|-------|------|
+| ![Home page in the light theme](docs/screenshots/home-light.png) | ![Home page in the dark theme](docs/screenshots/home-dark.png) |
+
+| QR code popup | Friendly 404 page | Unsafe link refused |
+|---------------|-------------------|---------------------|
+| ![QR code popup after shortening a link](docs/screenshots/qr-popup.png) | ![404 page with a stoppable countdown](docs/screenshots/404.png) | ![Error shown for a link Google Safe Browsing flags](docs/screenshots/unsafe-link.png) |
+
 ## Features
 
 - Shorten any URL into a random 6-character code
@@ -60,6 +70,29 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 - **QR codes are made in the browser:** a small library (`qrcode-generator`, pinned to one version with an integrity hash, loaded from jsDelivr) draws the code, so the server does no extra work and has no extra public routes. If the library can't load, the QR button simply doesn't appear. Codes are always black on white, because inverted codes fail in many scanners.
 - **The 404 countdown can be stopped:** a page that moves you away on a timer can lock out slow readers and screen-reader users, so there is a Stop button, a plain "go now" link, and a quiet announcement for screen readers instead of one per second.
 - **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    visitor(["Visitor's browser"])
+    cdn["jsDelivr CDN<br/>Puppertino styles, QR library"]
+    app["Render web service<br/>gunicorn + Flask"]
+    db[("Neon Postgres<br/>links, reports")]
+    google["Google Safe Browsing"]
+    github["GitHub repo"]
+
+    visitor -->|"HTTPS: shorten, redirect, report"| app
+    visitor -.->|"loads styles and QR library"| cdn
+    app -->|"SQL"| db
+    app -->|"checks each new URL"| google
+    github -->|"manual deploy"| app
+```
+
+- The browser talks only to the Flask app. Short links are looked up in Postgres and answered with a redirect.
+- Every new URL is checked with Google Safe Browsing before it is saved. If Google can't be reached, the link is allowed through.
+- Styles and the QR library come from a CDN, so the server never serves them.
+- Code reaches the live site only when I press the deploy button on Render, after the tests pass.
 
 ## How it is deployed
 
@@ -197,9 +230,18 @@ snipurlnk/
 - [x] Custom 404 page with a stoppable countdown
 - [x] QR code popup
 - [x] Favicon and link preview card
+- [ ] Redesign the front end
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
-## What I'm learning
+## What I learned
 
-Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, and Git/GitHub workflow, deploying to Render with gunicorn, accessible dialogs and countdowns, pinning third-party scripts with integrity hashes, and how proxies hide the visitor's address (and why a rate limiter must not trust a header the visitor can fake).
+- **Moving from SQLite to Postgres is more than a new connection string.** Codes use `citext` so `MySite` and `mysite` are the same link, Postgres is stricter about `GROUP BY`, placeholders changed from `?` to `%s`, and a failed insert needs a `rollback()` before the connection can be used again.
+- **A test database must be impossible to confuse with the real one.** The tests use their own `TEST_DATABASE_URL`, refuse to run if it matches `DATABASE_URL`, and refuse to delete anything unless a marker table exists.
+- **I checked my tests by breaking the code on purpose** and watching them fail, because a test that can't fail proves nothing.
+- **Measure instead of trusting the docs.** Render doesn't say how the visitor's address is passed on, so I measured it (three added addresses), set `ProxyFix(x_for=3)`, and wrote a test that proves a faked `X-Forwarded-For` header can't dodge the rate limit.
+- **Safe Browsing made me decide what happens when a service I depend on is down.** I chose to fail open: if Google can't be reached, links are still created and the failure is logged. I'd rather keep the site up, and I wrote the trade-off down.
+- **Secrets stay out of code and chat.** Connection strings and the API key live in environment variables and Render's settings, the key is restricted to one API, and it is sent in a header so it can't end up in a URL or a log.
+- **Accessibility is part of "done".** The 404 countdown can be stopped and is announced once to screen readers instead of every second, and the QR popup is a real dialog.
+
+Also practiced: Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, Git/GitHub workflow, deploying to Render with gunicorn, accessible dialogs and countdowns, pinning third-party scripts with integrity hashes, and how proxies hide the visitor's address (and why a rate limiter must not trust a header the visitor can fake).
