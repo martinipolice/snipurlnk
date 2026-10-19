@@ -30,6 +30,7 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 - Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
 - QR code popup for each new short link, with Download PNG, Share, and Copy link buttons
 - Friendly 404 page for unknown or removed links, with a countdown back to the home page that can be stopped, and a link to report a link
+- A favicon, and a link preview card (title, description and image) when the site's address is pasted into chat apps
 - Counts how many times each short link is visited (stored, not displayed yet)
 - Every new link is checked against Google Safe Browsing, and links flagged as malware, phishing, or unwanted software are refused. If Google can't be reached, links are allowed through
 - Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
@@ -155,7 +156,9 @@ snipurlnk/
 │   ├── 404.html              # Friendly "link not found" page
 │   └── report.html           # Report form
 ├── static/
-│   └── style.css             # Layout and theme tweaks on top of Puppertino
+│   ├── style.css             # Layout and theme tweaks on top of Puppertino
+│   ├── favicon.png           # Browser tab icon
+│   └── share.png             # Link preview image (1200x630)
 ├── tests/
 │   ├── conftest.py           # Test database fixture and its safety checks
 │   ├── test_validation.py    # URL validation
@@ -193,6 +196,7 @@ snipurlnk/
 - [x] Safe Browsing check on new links
 - [x] Custom 404 page with a stoppable countdown
 - [x] QR code popup
+- [x] Favicon and link preview card
 - [ ] User accounts and a dashboard showing each person's links and click counts
 - [ ] Link expiry
 
