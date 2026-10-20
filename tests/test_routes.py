@@ -492,3 +492,7 @@ def test_dashboard_has_copy_and_qr_buttons_for_each_link(client, with_secret_key
     assert 'class="p-button p-button-default copy-btn"' in page
     assert 'data-code="mylink1"' in page
     assert 'id="qrDialog"' in page and "qrcode-generator@1.4.4" in page
+
+def test_home_page_does_not_declare_the_qr_state_twice(client):
+    # qr.js declares currentQr; declaring it again in the page breaks the whole script
+    assert text(client.get("/")).count("let currentQr") == 0
