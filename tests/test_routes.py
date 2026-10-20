@@ -374,3 +374,27 @@ def test_a_cookie_for_a_missing_user_counts_as_logged_out(client, with_secret_ke
         s["user_id"] = 999999
     page = text(client.get("/"))
     assert "Log in with GitHub" in page
+
+# ---- who owns a new link ----
+
+def owner_of(code):
+    return query("SELECT owner_id FROM links WHERE code = %s", (code,))[0][0]
+
+
+def test_a_link_made_while_logged_in_belongs_to_you(client, with_secret_key):
+    user_id = log_in_as(client)
+    code = text(client.post("/shorten", data={"url": "https://example.com"}))
+    assert owner_of(code) == user_id
+
+
+def test_a_link_made_while_logged_out_has_no_owner(client):
+    code = text(client.post("/shorten", data={"url": "https://example.com"}))
+    assert owner_of(code) is None
+
+
+def test_a_cookie_for_a_missing_user_does_not_break_shortening(client, with_secret_key):
+    with client.session_transaction() as s:
+        s["user_id"] = 999999
+    response = client.post("/shorten", data={"url": "https://example.com"})
+    assert response.status_code == 200
+    assert owner_of(text(response)) is None

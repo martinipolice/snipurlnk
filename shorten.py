@@ -75,12 +75,12 @@ def get_user(user_id):  # returns (id, username), or None if there is no such us
     with get_conn() as conn:
         return conn.execute("SELECT id, username FROM users WHERE id = %s", (user_id,)).fetchone()
 
-def shorten(url, alias=None):
+def shorten(url, alias=None, owner_id=None):
     with get_conn() as conn:
         # if there is an alias, try it once
         if alias:
             try:
-                conn.execute("INSERT INTO links (code, url) VALUES (%s, %s)", (alias, url))
+                conn.execute("INSERT INTO links (code, url, owner_id) VALUES (%s, %s, %s)", (alias, url, owner_id))
                 return alias
             except psycopg.errors.UniqueViolation:
                 conn.rollback()
@@ -92,7 +92,7 @@ def shorten(url, alias=None):
             random_code = ''.join(random.choices(characterPool, k=6)) # generate a random 6-char code
 
             try:
-                conn.execute("INSERT INTO links (code, url) VALUES (%s, %s)", (random_code, url))
+                conn.execute("INSERT INTO links (code, url, owner_id) VALUES (%s, %s, %s)", (random_code, url, owner_id))
                 return random_code
             except psycopg.errors.UniqueViolation: # this ensures there is no dupes
                 conn.rollback() # clear the failed transaction, then try a new code

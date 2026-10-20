@@ -82,7 +82,13 @@ def create_short_link():
     if is_flagged(url):
         return "This link was flagged as unsafe by Google Safe Browsing, so it can't be shortened.", 400
 
-    result = shorten(url, alias or None)
+    owner_id = None
+    user_id = session.get("user_id")
+    if user_id:
+        user = get_user(user_id)  # the cookie could point at a user that no longer exists
+        owner_id = user[0] if user else None
+
+    result = shorten(url, alias or None, owner_id)
 
     if result is None:
         return "Alias already taken", 409

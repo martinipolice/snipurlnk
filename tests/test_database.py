@@ -172,3 +172,15 @@ def test_upsert_user_rejects_bad_data_and_stores_nothing(db, github_id, username
     with pytest.raises(ValueError):
         upsert_user(github_id, username)
     assert query("SELECT count(*) FROM users") == [(0,)]
+
+def test_a_link_made_with_an_owner_records_the_owner_and_creation_time(db):
+    user_id = upsert_user(583231, "octocat")
+    random_code = shorten("https://example.com", None, user_id)
+    custom_code = shorten("https://example.org", "mycustom", user_id)
+    rows = query("SELECT code, owner_id, created_at IS NOT NULL FROM links")
+    assert sorted(rows) == sorted([(random_code, user_id, True), (custom_code, user_id, True)])
+
+
+def test_a_link_made_without_an_owner_has_no_owner_but_has_a_creation_time(db):
+    code = shorten("https://example.com")
+    assert query("SELECT owner_id, created_at IS NOT NULL FROM links WHERE code = %s", (code,)) == [(None, True)]
