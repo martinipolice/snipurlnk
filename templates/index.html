@@ -24,6 +24,16 @@
 
     <body class="p-auto-dark-mode">
         <main>
+            <nav class="account" aria-label="Account">
+                {% if current_user %}
+                    <span>Logged in as <strong>{{ current_user[1] }}</strong></span>
+                    <form method="post" action="{{ url_for('logout') }}">
+                        <button type="submit" class="p-button p-button-default">Log out</button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('login') }}">Log in with GitHub</a>
+                {% endif %}
+            </nav>
             <h1>snipURlnk</h1>
             <p>Paste a long link, get a short one.</p>
             <input class="p-field" type="text" id="urlInput" placeholder="Paste a long URL" aria-label="Long URL">

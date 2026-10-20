@@ -5,7 +5,7 @@ import requests
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.flask_client import OAuth
 from flask import Flask, request, redirect, render_template, abort, session, url_for
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db, upsert_user  
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db, upsert_user, get_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 from safety import is_flagged
 
@@ -54,6 +54,12 @@ limiter = Limiter(
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.context_processor
+def add_current_user():
+    # makes `current_user` available in every template: (id, username), or None if nobody is logged in
+    user_id = session.get("user_id")
+    return {"current_user": get_user(user_id) if user_id else None}
 
 @app.route("/shorten", methods=["POST"])
 @limiter.limit("10 per minute")

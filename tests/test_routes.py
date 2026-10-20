@@ -336,3 +336,41 @@ def test_logout_clears_the_login(client, github):
     assert response.status_code == 303
     with client.session_transaction() as s:
         assert "user_id" not in s
+
+# ---- the login state shown on the home page ----
+
+@pytest.fixture
+def with_secret_key(client, monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module.app, "secret_key", "test-secret")
+
+
+def log_in_as(client, username="octocat", github_id=583231):
+    from shorten import upsert_user
+
+    user_id = upsert_user(github_id, username)
+    with client.session_transaction() as s:
+        s["user_id"] = user_id
+    return user_id
+
+
+def test_logged_out_visitors_see_the_login_link(client):
+    page = text(client.get("/"))
+    assert "Log in with GitHub" in page
+    assert "Log out" not in page
+
+
+def test_logged_in_visitors_see_their_name_and_a_logout_button(client, with_secret_key):
+    log_in_as(client, "octocat")
+    page = text(client.get("/"))
+    assert "Logged in as" in page and "octocat" in page
+    assert 'action="/logout"' in page and "Log out" in page
+    assert "Log in with GitHub" not in page
+
+
+def test_a_cookie_for_a_missing_user_counts_as_logged_out(client, with_secret_key):
+    with client.session_transaction() as s:
+        s["user_id"] = 999999
+    page = text(client.get("/"))
+    assert "Log in with GitHub" in page
