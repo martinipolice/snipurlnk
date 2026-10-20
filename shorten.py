@@ -155,3 +155,10 @@ def list_links(owner_id, limit=200):  # a person's live links, newest first: (co
             ORDER BY created_at DESC NULLS LAST, code
             LIMIT %s
         """, (owner_id, limit)).fetchall()
+
+def remove_link(code, owner_id):  # hides a link from its owner (the code stays taken); True if one was hidden
+    with get_conn() as conn:
+        return conn.execute(
+            "UPDATE links SET removed = 1 WHERE code = %s AND owner_id = %s AND removed = 0",
+            (code, owner_id),
+        ).rowcount == 1

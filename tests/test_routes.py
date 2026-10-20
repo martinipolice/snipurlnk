@@ -437,3 +437,39 @@ def test_dashboard_with_a_cookie_for_a_missing_user_goes_to_login(client, with_s
 def test_home_page_links_to_the_dashboard_when_logged_in(client, with_secret_key):
     log_in_as(client)
     assert 'href="/dashboard"' in text(client.get("/"))
+
+# ---- removing a link ----
+
+def test_remove_sends_logged_out_visitors_to_login_and_removes_nothing(client):
+    from shorten import expand, shorten
+
+    code = shorten("https://example.com")
+    response = client.post(f"/remove/{code}")
+    assert response.status_code == 303 and response.headers["Location"].endswith("/login")
+    assert expand(code) == "https://example.com"
+
+
+def test_you_can_remove_your_own_link(client, with_secret_key):
+    from shorten import shorten
+
+    me = log_in_as(client)
+    code = shorten("https://example.com", None, me)
+    response = client.post(f"/remove/{code}")
+    assert response.status_code == 303 and response.headers["Location"].endswith("/dashboard")
+    assert client.get(f"/{code}").status_code == 404
+    assert code not in text(client.get("/dashboard"))
+
+
+def test_you_cannot_remove_someone_elses_link(client, with_secret_key):
+    from shorten import expand, shorten, upsert_user
+
+    log_in_as(client, "octocat", 1)
+    other = upsert_user(2, "someoneelse")
+    code = shorten("https://theirs.example", None, other)
+    assert client.post(f"/remove/{code}").status_code == 404
+    assert expand(code) == "https://theirs.example"
+
+
+def test_remove_is_post_only(client, with_secret_key):
+    log_in_as(client)
+    assert client.get("/remove/anything").status_code == 405

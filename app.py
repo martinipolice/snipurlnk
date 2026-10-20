@@ -5,7 +5,7 @@ import requests
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.flask_client import OAuth
 from flask import Flask, request, redirect, render_template, abort, session, url_for, make_response
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db, upsert_user, get_user, list_links
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db, upsert_user, get_user, list_links, remove_link
 from werkzeug.middleware.proxy_fix import ProxyFix
 from safety import is_flagged
 
@@ -155,6 +155,16 @@ def dashboard():
     response = make_response(render_template("dashboard.html", links=list_links(user[0], DASHBOARD_LIMIT), limit=DASHBOARD_LIMIT))
     response.headers["Cache-Control"] = "private, no-store"  # a personal page: never keep a copy where someone else could see it
     return response
+
+@app.route("/remove/<code>", methods=["POST"])
+def remove(code):
+    user_id = session.get("user_id")
+    user = get_user(user_id) if user_id else None
+    if user is None:
+        return redirect(url_for("login"), code=303)
+    if not remove_link(code, user[0]):
+        abort(404)  # not yours or already gone: the same answer, so nobody can probe for other people's codes
+    return redirect(url_for("dashboard"), code=303)
 
 @app.route("/<code>")
 def follow_link(code):

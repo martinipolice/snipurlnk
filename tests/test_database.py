@@ -1,6 +1,6 @@
 import random
 import pytest
-from shorten import add_report, expand, get_conn, get_user, init_db, record_click, shorten, upsert_user, list_links
+from shorten import add_report, expand, get_conn, get_user, init_db, record_click, shorten, upsert_user, list_links, remove_link
 
 
 def query(sql, params=()):
@@ -198,3 +198,18 @@ def test_list_links_returns_only_this_owners_live_links_newest_first(db):
 
     rows = list_links(me)
     assert [row[0] for row in rows] == [second, first]
+
+def test_remove_link_only_works_for_the_owner(db):
+    me = upsert_user(1, "me")
+    other = upsert_user(2, "other")
+    mine = shorten("https://one.example", None, me)
+    nobodys = shorten("https://nobody.example")
+
+    assert remove_link(mine, other) is False      # not yours
+    assert remove_link(nobodys, me) is False      # ownerless links can't be removed
+    assert expand(mine) == "https://one.example"
+
+    assert remove_link(mine, me) is True
+    assert expand(mine) is None
+    assert remove_link(mine, me) is False         # already gone
+    assert query("SELECT removed FROM links WHERE code = %s", (mine,)) == [(1,)]  # row kept, so the code stays taken
