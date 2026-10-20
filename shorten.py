@@ -57,6 +57,24 @@ def init_db():
         conn.execute("ALTER TABLE links ALTER COLUMN created_at SET DEFAULT now()")
         conn.execute("CREATE INDEX IF NOT EXISTS links_owner_id_idx ON links (owner_id)")
 
+def upsert_user(github_id, username):  # creates the user, or refreshes the username if they renamed on GitHub; returns the user's id
+    if not isinstance(github_id, int) or isinstance(github_id, bool) or github_id <= 0:
+        raise ValueError("bad GitHub id")
+    if not isinstance(username, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,39}", username):
+        raise ValueError("bad GitHub username")
+
+    with get_conn() as conn:
+        row = conn.execute("""
+            INSERT INTO users (github_id, username) VALUES (%s, %s)
+            ON CONFLICT (github_id) DO UPDATE SET username = EXCLUDED.username
+            RETURNING id
+        """, (github_id, username)).fetchone()
+    return row[0]
+
+def get_user(user_id):  # returns (id, username), or None if there is no such user
+    with get_conn() as conn:
+        return conn.execute("SELECT id, username FROM users WHERE id = %s", (user_id,)).fetchone()
+
 def shorten(url, alias=None):
     with get_conn() as conn:
         # if there is an alias, try it once
