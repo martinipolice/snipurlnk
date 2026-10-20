@@ -225,3 +225,114 @@ def test_favicon_and_share_preview_are_wired_up(client):
 
     assert client.get("/static/favicon.png").status_code == 200
     assert client.get("/static/share.png").status_code == 200
+
+# ---- login with GitHub (a fake GitHub, nothing leaves the computer) ----
+
+from urllib.parse import parse_qs, urlparse
+
+from authlib.integrations.base_client.errors import OAuthError
+
+
+class FakeGitHubReply:
+    def __init__(self, data):
+        self._data = data
+
+    def json(self):
+        return self._data
+
+
+@pytest.fixture
+def github(client, monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module.app, "secret_key", "test-secret")
+    monkeypatch.setattr(app_module.oauth.github, "client_id", "test-client-id")
+    monkeypatch.setattr(app_module.oauth.github, "client_secret", "test-client-secret")
+
+    def reply_with(profile=None, token_error=None):
+        def fake_token(*args, **kwargs):
+            if token_error:
+                raise token_error
+            return {"access_token": "fake"}
+
+        monkeypatch.setattr(app_module.oauth.github, "authorize_access_token", fake_token)
+        monkeypatch.setattr(app_module.oauth.github, "get", lambda *a, **k: FakeGitHubReply(profile))
+
+    return reply_with
+
+
+CAT = {"id": 583231, "login": "octocat"}
+
+
+def test_login_says_so_when_it_is_not_set_up(client, monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module.app, "secret_key", None)
+    assert client.get("/login").status_code == 503
+    assert client.get("/login/github/callback").status_code == 503
+
+
+def test_login_sends_you_to_github_with_a_state_value(client, github):
+    response = client.get("/login")
+    assert response.status_code == 302
+    location = urlparse(response.headers["Location"])
+    assert location.netloc == "github.com" and location.path == "/login/oauth/authorize"
+    params = parse_qs(location.query)
+    assert params["client_id"] == ["test-client-id"]
+    assert params["state"][0]
+    assert params["redirect_uri"][0].endswith("/login/github/callback")
+    assert "scope" not in params
+
+
+def test_a_good_login_creates_the_user_and_a_safe_cookie(client, github):
+    github(CAT)
+    response = client.get("/login/github/callback?code=abc&state=x")
+    assert response.status_code == 302 and response.headers["Location"].endswith("/")
+
+    users = query("SELECT id, github_id, username FROM users")
+    assert [(u[1], u[2]) for u in users] == [(583231, "octocat")]
+    with client.session_transaction() as s:
+        assert s["user_id"] == users[0][0]
+
+    cookie = response.headers["Set-Cookie"]
+    assert "HttpOnly" in cookie and "SameSite=Lax" in cookie and "Expires=" in cookie
+
+
+def test_logging_in_twice_with_the_same_account_keeps_one_user(client, github):
+    github(CAT)
+    client.get("/login/github/callback")
+    client.get("/login/github/callback")
+    assert query("SELECT count(*) FROM users") == [(1,)]
+
+
+def test_cancelling_at_github_logs_nobody_in(client, github):
+    github(token_error=OAuthError("access_denied"))
+    response = client.get("/login/github/callback?error=access_denied")
+    assert response.status_code == 400
+    assert query("SELECT count(*) FROM users") == [(0,)]
+    with client.session_transaction() as s:
+        assert "user_id" not in s
+
+
+def test_a_bad_profile_from_github_logs_nobody_in(client, github):
+    github({"message": "Bad credentials"})
+    assert client.get("/login/github/callback").status_code == 400
+    assert query("SELECT count(*) FROM users") == [(0,)]
+
+
+def test_login_throws_away_anything_already_in_the_session(client, github):
+    github(CAT)
+    with client.session_transaction() as s:
+        s["planted"] = "attacker"
+    client.get("/login/github/callback")
+    with client.session_transaction() as s:
+        assert "planted" not in s and "user_id" in s
+
+
+def test_logout_clears_the_login(client, github):
+    github(CAT)
+    client.get("/login/github/callback")
+    response = client.post("/logout")
+    assert response.status_code == 303
+    with client.session_transaction() as s:
+        assert "user_id" not in s
