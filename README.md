@@ -1,20 +1,12 @@
-```
---   ___ _  _ ___ ___ _   _ ___ _    _  _ _  __ ----
---  / __| \| |_ _| _ \ | | | _ \ |  | \| | |/ / ----
---  \__ \ .` || ||  _/ |_| |   / |__| .` | ' < ----
---  |___/_|\_|___|_|  \___/|_|_\____|_|\_|_|\_\ ----
---  ------------------------------------
-```
+# snipURlnk
 
-A URL shortener built with Python, Flask, and Postgres (hosted on Neon). I'm building it as a learning project, one step at a time.
+A free URL shortener with custom aliases, QR codes, a link-safety check and optional GitHub login. Built with Flask and Postgres.
 
-## Live demo
+**Live demo: <https://snipurlnk.onrender.com>**
 
-https://snipurlnk.onrender.com
+I built it as a learning project, one small tested step at a time. It is deployed on free hosting and aimed at friends and classmates, not at heavy traffic.
 
-It runs on Render's free plan, which puts the app to sleep after 15 minutes without visitors. The first visit after a sleep takes about 30 seconds to wake it up (I measured 32.5 s; Render says it can take up to a minute). After that, pages load in under a second.
-
-## Screenshots
+> The free Render plan puts the app to sleep after 15 minutes without visitors. The first visit after that takes about 30 seconds (I measured 32.5 s). After that, pages load in under a second.
 
 | Light | Dark |
 |-------|------|
@@ -26,129 +18,140 @@ It runs on Render's free plan, which puts the app to sleep after 15 minutes with
 
 ## Features
 
-- Shorten any URL into a random 6-character code
-- Optional custom aliases (3 to 30 characters: letters, digits, `-` and `_`), case-insensitive, with a list of reserved words
-- Redirect from the short link to the original URL
-- Links are stored in a hosted Postgres database, so they survive server restarts and redeploys
-- Collision-safe code generation: a taken code is never overwritten
-- URL validation: only `http` and `https` links with a real domain are accepted, and bad ports, spaces, control characters, and URLs over 2,048 characters are rejected
-- Auto-fixes missing schemes (`example.com` becomes `https://example.com`)
-- Every submission creates its own new link, even for a URL that was shortened before
-- Web page with clear error messages, Copy and Go buttons, and Enter-to-submit
+**Shortening**
+- Random 6-character codes, or your own alias (3 to 30 letters, digits, `-` or `_`; case-insensitive; some words like `admin` are reserved)
+- A taken code is never overwritten, and every submission creates its own new link
+- Strict URL validation: only `http` and `https` with a real domain, a valid port, no spaces or control characters, at most 2,048 characters. A missing scheme is added for you (`example.com` becomes `https://example.com`)
+- Copy, Go and QR code buttons on each new link. The QR popup also has Download PNG, Share and Copy link
+- Click counts for every link
+
+**Accounts (optional)**
+- Log in with GitHub. Anyone can still shorten links without logging in
+- Links made while logged in are yours. A **Your links** dashboard lists them with click counts and creation dates, and lets you Copy, show a QR code, or Remove each one (Remove asks "Are you sure?" first)
+- Only your numeric GitHub ID and username are stored: no email, no passwords
+
+**Safety and abuse control**
+- Every new link is checked against Google Safe Browsing. Links flagged as malware, phishing or unwanted software are refused. If Google can't be reached, the link is allowed through and a warning is logged
+- Rate limits per visitor: 10 new links per minute and 100 per day, 5 reports per minute and 20 per day, 120 requests per minute elsewhere
+- Visitors can report a link from the home page or the 404 page. Reports are reviewed with admin commands in the terminal
+
+**Quality**
 - Light and dark themes that follow the device setting
-- Styled with [Puppertino](https://github.com/codedgar/Puppertino), loaded from the jsDelivr CDN
-- Proper error responses: `400` for missing or invalid input, `404` for unknown codes, `409` for a taken alias
-- QR code popup for each new short link, with Download PNG, Share, and Copy link buttons
-- Friendly 404 page for unknown or removed links, with a countdown back to the home page that can be stopped, and a link to report a link
-- A favicon, and a link preview card (title, description and image) when the site's address is pasted into chat apps
-- Counts how many times each short link is visited (stored, not displayed yet)
-- Every new link is checked against Google Safe Browsing, and links flagged as malware, phishing, or unwanted software are refused. If Google can't be reached, links are allowed through
-- Rate limiting per visitor: 10 links per minute and 100 per day, 120 requests per minute elsewhere
-- Report a link from the page, and review and remove reported links with admin commands
-- Automated pytest suite covering validation, the database code, and the web routes, run against a separate test database
+- A friendly 404 page whose countdown can be stopped (screen-reader friendly)
+- A favicon and a link preview card for chat apps
+- A pytest suite of about 150 tests that runs against a separate test database
+
+## Quick start (run it locally)
+
+You need Python 3.13 (see `.python-version`) and a free Postgres database from [Neon](https://neon.com).
+
+```bash
+git clone https://github.com/martinipolice/snipurlnk.git
+cd snipurlnk
+python -m venv venv
+source venv/bin/activate        # Windows PowerShell: .\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Set your database connection string, then start the app. The tables are created automatically on first run.
+
+```bash
+export DATABASE_URL='postgresql://...'      # Windows PowerShell: $env:DATABASE_URL = 'postgresql://...'
+python app.py
+```
+
+Open <http://127.0.0.1:5000>. The page loads its styles from a CDN, so it needs an internet connection to look styled. For auto-reload while developing, set `FLASK_DEBUG=1` before starting.
+
+Treat every value below like a password: keep it in environment variables, never commit it, and never paste it into chat or screenshots.
+
+### Configuration
+
+| Variable | Required | What it is for |
+|----------|----------|----------------|
+| `DATABASE_URL` | yes | Postgres connection string (contains the database password) |
+| `SAFE_BROWSING_API_KEY` | no | Turns on the link safety check. Without it, links aren't checked and a warning is logged. Google limits this API to non-commercial use |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SECRET_KEY` | no | Turn on login with GitHub. Without them, `/login` answers `503` and everything else still works |
+| `TEST_DATABASE_URL` | for tests | A separate test database (see [Running the tests](#running-the-tests)) |
+
+**Setting up GitHub login locally:** on GitHub go to Settings, Developer settings, OAuth Apps, New OAuth App. Use `http://127.0.0.1:5000` as the homepage and `http://127.0.0.1:5000/login/github/callback` as the callback URL, and don't request any scopes. Make a key with `python -c "import secrets; print(secrets.token_hex(32))"` for `SECRET_KEY`, and never reuse it on the live site. Always open the local site as `127.0.0.1`, not `localhost`, because the callback address must match exactly.
 
 ## How it works
-
-1. You submit a URL, and optionally a custom alias.
-2. The server cleans up the URL: it trims whitespace and adds `https://` if no scheme is given.
-3. It validates the URL. The scheme must be `http` or `https`, the hostname must contain a dot, and the URL must be printable, free of spaces, have a valid port, and be at most 2,048 characters. Anything else is rejected with a `400`.
-4. If an alias was given, it must match the allowed pattern and not be a reserved word (like `admin` or `login`), or the server returns a `400`.
-5. The server asks Google Safe Browsing whether the URL is dangerous. If it is, the server refuses it with a `400` and saves nothing. If Google can't be reached within 3 seconds, the link is allowed through and a warning is logged.
-6. The server saves the pair `code -> URL` in a Postgres table.
-   - With an alias, it tries to insert that code once. If it's taken, the server returns a `409`.
-   - Without one, it generates a random code and retries with a new one if there's a collision.
-7. When someone visits `/<code>`, the server looks up the code, adds 1 to that link's click count, and redirects to the original URL. Unknown or removed codes return a `404` and change nothing.
-
-### Design decisions
-
-- **One link per submission:** submitting the same URL twice creates two different short links. This keeps each person's link independent, and it makes per-link features (like click counts) possible later.
-- **Case-insensitive codes:** the `code` column uses Postgres's `citext` type, so `MySite` and `mysite` are the same link. This prevents lookalike links from being registered by different people.
-- **Click counts include all redirects:** every successful visit to a short link adds 1, including automated ones like link previews and prefetches. Filtering these out is a possible later improvement.
-- **Fail open on Google outages:** if Safe Browsing can't be reached, new links are still created, because I'd rather keep the site usable than block everyone during a Google problem. The risk is that a bad link could slip through during an outage, so failures are logged.
-- **Checked once, when the link is created:** a site that turns bad later is not caught. Checking on every visit would slow redirects and use up the API quota.
-- **Privacy:** every submitted URL is sent to Google for checking.
-- **QR codes are made in the browser:** a small library (`qrcode-generator`, pinned to one version with an integrity hash, loaded from jsDelivr) draws the code, so the server does no extra work and has no extra public routes. If the library can't load, the QR button simply doesn't appear. Codes are always black on white, because inverted codes fail in many scanners.
-- **The 404 countdown can be stopped:** a page that moves you away on a timer can lock out slow readers and screen-reader users, so there is a Stop button, a plain "go now" link, and a quiet announcement for screen readers instead of one per second.
-- **Removed, not deleted:** removing a link sets a flag instead of deleting the row, so the code stays taken and the same alias can't be registered again.
-
-## Architecture
 
 ```mermaid
 flowchart LR
     visitor(["Visitor's browser"])
     cdn["jsDelivr CDN<br/>Puppertino styles, QR library"]
     app["Render web service<br/>gunicorn + Flask"]
-    db[("Neon Postgres<br/>links, reports")]
+    db[("Neon Postgres<br/>links, reports, users")]
     google["Google Safe Browsing"]
+    ghlogin["GitHub login (OAuth)"]
     github["GitHub repo"]
 
     visitor -->|"HTTPS: shorten, redirect, report"| app
     visitor -.->|"loads styles and QR library"| cdn
+    visitor -.->|"log in"| ghlogin
+    ghlogin -.->|"who you are"| app
     app -->|"SQL"| db
     app -->|"checks each new URL"| google
     github -->|"manual deploy"| app
 ```
 
-- The browser talks only to the Flask app. Short links are looked up in Postgres and answered with a redirect.
-- Every new URL is checked with Google Safe Browsing before it is saved. If Google can't be reached, the link is allowed through.
-- Styles and the QR library come from a CDN, so the server never serves them.
-- Code reaches the live site only when I press the deploy button on Render, after the tests pass.
+**Creating a link**
 
-## How it is deployed
+1. The server trims the URL and adds `https://` if there is no scheme, then validates it. Anything invalid gets a `400`.
+2. If you gave an alias, it must match the allowed pattern and not be reserved (`400`).
+3. Google Safe Browsing is asked about the URL. A flagged URL is refused with a `400` and nothing is saved. If Google doesn't answer within 3 seconds, the link goes through.
+4. The link is saved. With an alias, the server tries that code once and returns `409` if it is taken. Without one, it picks a random code and retries on a collision. If you are logged in, the link is stored with your user ID as its owner.
 
-- **Host:** Render free web service (Singapore region), started with `gunicorn app:app`
-- **Database:** Neon Postgres, in a separate project from the one I develop against
-- **Settings:** `DATABASE_URL` and `SAFE_BROWSING_API_KEY` are set on Render's Environment page, never in the code
-- **Python version:** pinned in `.python-version`
-- **Deploys:** manual, only after the tests pass
-- **Visitor address:** Render adds three addresses to `X-Forwarded-For`, so the app trusts exactly three (`ProxyFix(x_for=3)`). I measured this on the live site, and a test checks that a faked header can't get around the rate limit.
+**Visiting a link:** the server looks up the code, adds 1 to its click count and redirects. Unknown or removed codes return the 404 page and change nothing.
 
-## Getting started
+**Logging in:** `/login` sends you to GitHub, which sends you back to `/login/github/callback` with proof of who you are. The server creates or finds your user and starts a fresh session. The session cookie holds only your user ID, signed with `SECRET_KEY`. It lasts 7 days, is `HttpOnly` and `SameSite=Lax`, and is `Secure` (HTTPS only) on the live site. Logging out is a `POST`.
 
-**Requirements:** Python 3.
+### Routes
 
-**Database:** create a free Postgres database at [Neon](https://neon.com), copy its connection string, and set it as `DATABASE_URL`. Never commit it, because it contains the database password.
+| Route | What it does |
+|-------|--------------|
+| `GET /` | The shortener page |
+| `POST /shorten` | Creates a link from the form fields `url` and optional `alias` and returns the code. `400` for a bad URL or alias or a Safe Browsing match, `409` if the alias is taken |
+| `GET /<code>` | Redirects to the original URL. `404` if the code doesn't exist or was removed |
+| `GET /report`, `POST /report` | The report form, and saving a report (fields `link` and optional `reason`). `404` if the link doesn't exist |
+| `GET /login` | Sends you to GitHub (`503` if login isn't set up) |
+| `GET /login/github/callback` | Where GitHub sends you back. Starts your session (`400` if the login fails) |
+| `POST /logout` | Ends your session |
+| `GET /dashboard` | Your links, newest first, up to 200. Sends you to log in if you aren't. Never cached |
+| `POST /remove/<code>` | Removes one of your links. `404` if it isn't yours or is already gone |
 
-- Windows PowerShell: `$env:DATABASE_URL = 'postgresql://...'`
-- macOS or Linux: `export DATABASE_URL='postgresql://...'`
+### Design decisions
 
-```bash
-git clone https://github.com/martinipolice/snipurlnk.git
-cd snipurlnk
-pip install -r requirements.txt
-python app.py
-```
+- **One link per submission.** Submitting the same URL twice makes two links, so each person's link is independent and per-link features like click counts work.
+- **Case-insensitive codes.** The `code` column is Postgres `citext`, so `MySite` and `mysite` are the same link and lookalike links can't be registered.
+- **Removed, not deleted.** Removing a link sets a flag instead of deleting the row, so the code stays taken and the alias can't be claimed again.
+- **Ownership is checked on the server.** The dashboard lists only your links, and Remove matches the code and the owner together. Someone else's link, a removed link and a missing link all give the same `404`, so nobody can probe which codes belong to others. Links made before accounts existed have no owner, so nobody can remove them from a dashboard.
+- **GitHub login instead of passwords.** The app stores no passwords and no email, only a GitHub ID and a username.
+- **Safe Browsing fails open and is checked once.** If Google is down, links are still created (the failure is logged), because I'd rather keep the site usable. A site that turns bad later is not caught, since checking on every visit would slow redirects and use up the quota. Every submitted URL is sent to Google.
+- **Click counts include every redirect**, including link previews and prefetches. Filtering them out is a possible later improvement.
+- **QR codes are made in the browser** with `qrcode-generator` (pinned to one version with an integrity hash, loaded from jsDelivr), so the server does no extra work. If the library doesn't load, the QR buttons disappear and the rest still works. Codes are always black on white, because inverted codes fail in many scanners.
+- **The 404 countdown can be stopped.** A timed redirect can lock out slow readers, so there is a Stop button, a plain "go now" link, and one quiet announcement for screen readers instead of one per second.
+- **Remove asks first.** A `<dialog>` names the link and explains that its code stays taken. Removal itself is a `POST`, and the `SameSite=Lax` cookie stops other sites from triggering it.
 
-**Safe Browsing (optional):** to turn on the link safety check, create an API key for the Safe Browsing API in Google Cloud Console, restrict it to that API, and set it as `SAFE_BROWSING_API_KEY` (same way as `DATABASE_URL`). Without it, links are not checked and a warning is logged. Google's terms limit this API to non-commercial use.
+## Deployment
 
-Then open http://127.0.0.1:5000 in your browser. The tables are created automatically on first run. The first request after the database has been idle can take a few seconds while it wakes up. The page loads its stylesheet from a CDN, so it needs an internet connection to look styled.
-
-**Auto-reload while developing:** debug mode is off by default. Turn it on before starting the server:
-
-- Windows PowerShell: `$env:FLASK_DEBUG="1"`
-- macOS or Linux: `export FLASK_DEBUG=1`
-
-## Routes
-
-| Route | Description |
-|-------|-------------|
-| `/` | Web page with the shortener form |
-| `POST /shorten` | Creates a short link from the form fields `url` and optional `alias`, and returns the code. Returns `400` for a missing or invalid URL or alias, and `409` if the alias is taken. Also returns `400` if Google Safe Browsing flags the URL |
-| `GET /report` | Page with a form to report a short link |
-| `POST /report` | Saves a report from the form fields `link` (a short link or code) and optional `reason`. Returns `404` if the link doesn't exist. Rate limited |
-| `/<code>` | Redirects to the original URL (`404` if the code doesn't exist or was removed) |
+- **Host:** Render free web service (Singapore), started with `gunicorn app:app`, with deploys triggered manually after the tests pass
+- **Database:** a Neon Postgres project separate from the one used for development. Before a release that changes tables, I make a Neon branch of it as a restore point. Table changes in `init_db()` only add things, so the previous version keeps working if I have to roll back
+- **Settings:** all environment variables above are set on Render's Environment page. The live site has its own GitHub OAuth app (callback `https://snipurlnk.onrender.com/login/github/callback`) and its own `SECRET_KEY`
+- **Python:** pinned in `.python-version`
+- **Visitor address:** Render adds three addresses to `X-Forwarded-For`, so the app trusts exactly three (`ProxyFix(x_for=3)`). I measured this on the live site, and a test checks that a faked header can't get around the rate limit
+- **Rate-limit storage:** in memory, which is correct only with one gunicorn worker. Moving to several workers would need a shared store
 
 ## Admin commands
 
-Run these from the project folder to review reports and remove links. There is no admin page on the site.
+There is no admin page. Run these from the project folder, with `DATABASE_URL` pointing at the database you mean to change:
 
 ```bash
 python admin.py reports          # list open reports, grouped by link
-python admin.py remove <code>    # hide a link; visits show "Link not found"
+python admin.py remove <code>    # hide a link; visits show the 404 page
 python admin.py dismiss <code>   # clear reports for a link you decided to keep
 ```
-
-Removed links stay in the database, so their codes can't be registered again.
 
 ## Running the tests
 
@@ -157,91 +160,72 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-The validation and text-helper tests need no database, so they run on their own in a fraction of a second:
+The validation and text-helper tests need no database and run in a fraction of a second:
 
 ```bash
 python -m pytest -q tests/test_validation.py tests/test_text_helpers.py
 ```
 
-The Safe Browsing tests use a fake network, so they never contact Google or need an API key. The database and route tests need a separate test database. Without one, they skip themselves.
+The Safe Browsing tests use a fake network, so they never contact Google. The login tests use a fake GitHub. The database and route tests need a separate test database and skip themselves without one:
 
 1. In Neon, create a branch of your database (for example `test`) and copy its connection string.
-2. Set it as `TEST_DATABASE_URL`. This is a different variable from `DATABASE_URL`:
-   - Windows PowerShell: `$env:TEST_DATABASE_URL = 'postgresql://...'`
-   - macOS or Linux: `export TEST_DATABASE_URL='postgresql://...'`
-3. Mark that database as a test database, once, in Neon's SQL Editor or any Postgres client:
+2. Set it as `TEST_DATABASE_URL`. This is a different variable from `DATABASE_URL`.
+3. Mark it as a test database, once, in Neon's SQL Editor or any Postgres client:
    ```sql
    CREATE TABLE IF NOT EXISTS i_am_a_test_database (id INTEGER);
    ```
 
-The tests empty the `links` and `reports` tables before every test, so they have three safety checks. They skip if `TEST_DATABASE_URL` is missing, they refuse to run if it matches `DATABASE_URL`, and they refuse to delete anything unless the `i_am_a_test_database` table exists. Never create that table in your real database.
+The tests empty the `reports`, `links` and `users` tables before every test, so there are three safety checks. They skip if `TEST_DATABASE_URL` is missing, refuse to run if it matches `DATABASE_URL`, and refuse to delete anything unless the `i_am_a_test_database` table exists. Never create that table in your real database. The full run takes two to four minutes.
 
 ## Project structure
 
 ```
 snipurlnk/
-├── app.py                    # Flask routes
-├── shorten.py                # URL and alias validation, code generation, Postgres storage
+├── app.py                    # Flask routes, login, dashboard
+├── shorten.py                # Validation, code generation, Postgres storage, users, owned links
 ├── safety.py                 # Google Safe Browsing check
 ├── admin.py                  # Review reports and remove links from the terminal
 ├── templates/
-│   ├── index.html            # Front end, page script, and the QR popup
+│   ├── index.html            # Home page and its script
+│   ├── dashboard.html        # Your links, with Copy, QR and Remove
+│   ├── _qr_dialog.html       # QR popup, shared by the home page and dashboard
 │   ├── 404.html              # Friendly "link not found" page
 │   └── report.html           # Report form
 ├── static/
 │   ├── style.css             # Layout and theme tweaks on top of Puppertino
+│   ├── qr.js                 # Draws, downloads, shares and copies QR codes
 │   ├── favicon.png           # Browser tab icon
 │   └── share.png             # Link preview image (1200x630)
-├── tests/
-│   ├── conftest.py           # Test database fixture and its safety checks
-│   ├── test_validation.py    # URL validation
-│   ├── test_text_helpers.py  # URL normalizing, aliases, code extraction
-│   ├── test_safety.py        # Safe Browsing check with a fake network
-│   ├── test_database.py      # Database code against the test database
-│   └── test_routes.py        # Web routes, redirects, and rate limits
-├── pytest.ini                # pytest settings
+├── tests/                    # pytest suite and its test-database safety checks
+├── docs/screenshots/         # Images used in this README
+├── pytest.ini
 ├── .python-version           # Python version used on Render
 ├── requirements.txt          # What the app needs to run
-├── requirements-dev.txt      # Adds the test tools
-└── README.md
+└── requirements-dev.txt      # Adds the test tools
 ```
 
 ## Roadmap
 
-- [x] Core shorten/expand logic with collision handling
-- [x] Flask web server with redirect route
-- [x] SQLite storage
-- [x] Basic front end
-- [x] URL validation
-- [x] Auto-add `https://` to URLs without a scheme
-- [x] Decide duplicate-URL behavior (new link per submission)
-- [x] Clear error messages on the page, and a clickable short link
-- [x] Copy and Go buttons
-- [x] Custom aliases
-- [x] CSS styling (light and dark themes)
-- [x] Click counts (stored per link, no display yet)
-- [x] Deployment prep: switch `/shorten` to POST and turn off `debug=True`
-- [x] Rate limiting per visitor
-- [x] Report and remove links
-- [x] Move from SQLite to a free hosted database (Postgres)
-- [x] Automated tests with pytest, using a separate test database
-- [x] Deploy on a free host (Render + Neon)
-- [x] Safe Browsing check on new links
-- [x] Custom 404 page with a stoppable countdown
-- [x] QR code popup
-- [x] Favicon and link preview card
-- [ ] Redesign the front end
-- [ ] User accounts and a dashboard showing each person's links and click counts
+Done: core shortening, Postgres storage, validation, custom aliases, light/dark UI, rate limiting, report and remove, automated tests, deployment on Render and Neon, Safe Browsing, custom 404, QR codes, favicon and preview card, GitHub login, and the dashboard with Copy, QR and Remove.
+
+Next:
 - [ ] Link expiry
+- [ ] Redesign the front end (then retake the screenshots, and add one of the dashboard)
+- [ ] Speed up the test suite
 
 ## What I learned
 
-- **Moving from SQLite to Postgres is more than a new connection string.** Codes use `citext` so `MySite` and `mysite` are the same link, Postgres is stricter about `GROUP BY`, placeholders changed from `?` to `%s`, and a failed insert needs a `rollback()` before the connection can be used again.
-- **A test database must be impossible to confuse with the real one.** The tests use their own `TEST_DATABASE_URL`, refuse to run if it matches `DATABASE_URL`, and refuse to delete anything unless a marker table exists.
-- **I checked my tests by breaking the code on purpose** and watching them fail, because a test that can't fail proves nothing.
-- **Measure instead of trusting the docs.** Render doesn't say how the visitor's address is passed on, so I measured it (three added addresses), set `ProxyFix(x_for=3)`, and wrote a test that proves a faked `X-Forwarded-For` header can't dodge the rate limit.
-- **Safe Browsing made me decide what happens when a service I depend on is down.** I chose to fail open: if Google can't be reached, links are still created and the failure is logged. I'd rather keep the site up, and I wrote the trade-off down.
-- **Secrets stay out of code and chat.** Connection strings and the API key live in environment variables and Render's settings, the key is restricted to one API, and it is sent in a header so it can't end up in a URL or a log.
-- **Accessibility is part of "done".** The 404 countdown can be stopped and is announced once to screen readers instead of every second, and the QR popup is a real dialog.
+- **Moving from SQLite to Postgres is more than a new connection string.** Codes use `citext`, Postgres is stricter about `GROUP BY`, placeholders change from `?` to `%s`, and a failed insert needs a `rollback()` before the connection can be used again.
+- **A test database must be impossible to confuse with the real one.** Separate `TEST_DATABASE_URL`, a refusal to run if it matches `DATABASE_URL`, and a marker table before anything is deleted. I also broke the code on purpose to watch the tests fail, because a test that can't fail proves nothing.
+- **Measure instead of trusting the docs.** Render doesn't say how the visitor's address is passed on, so I measured it, set `ProxyFix(x_for=3)`, and wrote a test showing a faked header can't dodge the rate limit.
+- **Decide what happens when a dependency is down.** For Safe Browsing I chose to fail open and wrote the trade-off down.
+- **Let someone else handle passwords.** GitHub login meant no password storage or reset flow and almost no personal data. The OAuth `state` check blocks forged logins, and a signed cookie holding only a user ID is enough.
+- **Check ownership on the server, every time.** Hiding a button isn't protection. Remove looks up the link and the owner together.
+- **Back up before changing a live database.** The first accounts deploy added tables and columns to live data, so I made a Neon branch first.
+- **My tests don't run my JavaScript.** After moving the QR code into a shared file, one leftover `let` declared the same name twice and the live Shorten button silently stopped working. I only saw it in the browser console. I added a test for that line and now check the console after editing any template.
+- **Secrets stay out of code and chat.** They live in environment variables and Render's settings, and the Safe Browsing key is restricted to one API and sent in a header so it can't end up in a URL or a log.
+- **Accessibility is part of "done".** A stoppable countdown, announcements made once instead of every second, and real `<dialog>` popups.
 
-Also practiced: Flask routing, HTTP status codes and redirects, SQL basics, moving from SQLite to Postgres, environment variables and keeping secrets out of Git, automated testing with pytest (fixtures, parametrized tests, and a safe test database), input validation with regular expressions and `urlparse`, error handling with try/except, DOM scripting in JavaScript, CSS theming, Git/GitHub workflow, deploying to Render with gunicorn, accessible dialogs and countdowns, pinning third-party scripts with integrity hashes, and how proxies hide the visitor's address (and why a rate limiter must not trust a header the visitor can fake).
+## License
+
+No license has been chosen yet, so by default all rights are reserved. If you want to reuse the code, please open an issue first.
