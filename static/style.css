@@ -92,3 +92,5 @@ main.wide { max-width: 40rem; }
 .link-list .short { font-family: ui-monospace, "SF Mono", monospace; overflow-wrap: anywhere; }
 .link-list .dest { color: light-dark(#6E6E73, #98989D); overflow-wrap: anywhere; }
 .link-list .meta { font-size: .85rem; color: light-dark(#6E6E73, #98989D); }
+
+.link-list .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .4rem; }

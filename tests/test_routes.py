@@ -473,3 +473,12 @@ def test_you_cannot_remove_someone_elses_link(client, with_secret_key):
 def test_remove_is_post_only(client, with_secret_key):
     log_in_as(client)
     assert client.get("/remove/anything").status_code == 405
+
+def test_dashboard_has_a_remove_button_for_each_of_your_links(client, with_secret_key):
+    from shorten import shorten
+
+    me = log_in_as(client)
+    shorten("https://mine.example/page", "mylink1", me)
+    page = text(client.get("/dashboard"))
+    assert 'data-action="/remove/mylink1"' in page
+    assert 'id="removeDialog"' in page

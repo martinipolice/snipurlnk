@@ -30,6 +30,11 @@
                             <span class="short">{{ url_for('follow_link', code=code, _external=True) }}</span>
                             <span class="dest">{{ url }}</span>
                             <span class="meta">{{ clicks }} click{{ '' if clicks == 1 else 's' }} · Created {{ created_at.strftime('%d %b %Y') if created_at else 'on an unknown date' }}</span>
+                            <span class="actions">
+                                <button type="button" class="p-button p-button-default remove-btn"
+                                        data-action="{{ url_for('remove', code=code) }}"
+                                        data-short="{{ url_for('follow_link', code=code, _external=True) }}">Remove</button>
+                            </span>
                         </li>
                     {% endfor %}
                 </ul>
@@ -37,6 +42,34 @@
                 <p>You haven't made any links while logged in yet. Links you make from the <a href="{{ url_for('home') }}">home page</a> will show up here.</p>
             {% endif %}
         </main>
+
+        <dialog id="removeDialog" aria-labelledby="removeTitle">
+            <h2 id="removeTitle">Remove this link?</h2>
+            <p id="removeLink" class="short"></p>
+            <p>The short link will stop working. Its code stays taken, so nobody else can reuse it.</p>
+            <form method="post" id="removeForm">
+                <button type="submit" class="p-button p-button-primary">Yes, remove</button>
+                <button type="button" class="p-button p-button-default" id="removeCancel">Cancel</button>
+            </form>
+        </dialog>
+
+        <script>
+        const removeDialog = document.getElementById("removeDialog");
+        const removeForm = document.getElementById("removeForm");
+        const removeLink = document.getElementById("removeLink");
+
+        document.querySelectorAll(".remove-btn").forEach(function (button) {
+            button.addEventListener("click", function () {
+                removeForm.action = button.dataset.action;
+                removeLink.textContent = button.dataset.short;
+                removeDialog.showModal();
+            });
+        });
+
+        document.getElementById("removeCancel").addEventListener("click", function () {
+            removeDialog.close();
+        });
+        </script>
     </body>
 
 </html>
