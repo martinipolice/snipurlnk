@@ -28,6 +28,7 @@ def db(monkeypatch):
     with get_conn() as conn:
         conn.execute("DELETE FROM reports")
         conn.execute("DELETE FROM links")
+        conn.execute("DELETE FROM users")
 
 @pytest.fixture(autouse=True)
 def no_real_safe_browsing(monkeypatch):

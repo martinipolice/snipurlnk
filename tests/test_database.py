@@ -1,6 +1,6 @@
 import random
-
-from shorten import add_report, expand, get_conn, record_click, shorten
+import pytest
+from shorten import add_report, expand, get_conn, init_db, record_click, shorten
 
 
 def query(sql, params=()):
@@ -108,3 +108,31 @@ def test_report_reason_is_cleaned_and_shortened(db):
     add_report("abc123", "x" * 300)
     reasons = [row[0] for row in query("SELECT reason FROM reports ORDER BY id")]
     assert reasons == ["badreason", "x" * 200]
+
+def test_github_id_must_be_unique(db):
+    import psycopg
+
+    with get_conn() as conn:
+        conn.execute("INSERT INTO users (github_id, username) VALUES (1, 'first')")
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        with get_conn() as conn:
+            conn.execute("INSERT INTO users (github_id, username) VALUES (1, 'second')")
+
+
+def test_init_db_upgrades_an_old_links_table_without_losing_rows(db):
+    # pretend this is the table from before accounts existed
+    with get_conn() as conn:
+        conn.execute("ALTER TABLE links DROP COLUMN IF EXISTS owner_id")
+        conn.execute("ALTER TABLE links DROP COLUMN IF EXISTS created_at")
+        conn.execute("INSERT INTO links (code, url) VALUES ('oldlink', 'https://old.example')")
+
+    init_db()
+
+    with get_conn() as conn:
+        row = conn.execute("SELECT url, owner_id, created_at FROM links WHERE code = 'oldlink'").fetchone()
+    assert row == ("https://old.example", None, None)  # kept, no owner, creation time unknown
+
+    shorten("https://new.example", "newlink")
+    with get_conn() as conn:
+        created = conn.execute("SELECT created_at FROM links WHERE code = 'newlink'").fetchone()[0]
+    assert created is not None  # new links do get a creation time

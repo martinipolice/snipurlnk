@@ -43,6 +43,19 @@ def init_db():
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                github_id BIGINT NOT NULL UNIQUE,
+                username TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """)
+        # Added on their own, so an existing table (like the live one) is upgraded in place
+        conn.execute("ALTER TABLE links ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id)")
+        conn.execute("ALTER TABLE links ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ")
+        conn.execute("ALTER TABLE links ALTER COLUMN created_at SET DEFAULT now()")
+        conn.execute("CREATE INDEX IF NOT EXISTS links_owner_id_idx ON links (owner_id)")
 
 def shorten(url, alias=None):
     with get_conn() as conn:
