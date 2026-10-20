@@ -6,6 +6,8 @@
         <title>snipURlnk</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins@5.2.7/latin-400.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins@5.2.7/latin-600.css">
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
         <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
@@ -22,7 +24,7 @@
         <meta name="twitter:card" content="summary_large_image">
     </head>
 
-    <body class="p-auto-dark-mode">
+    <body class="p-dark-mode">
         <main>
             <nav class="account" aria-label="Account">
                 {% if current_user %}
@@ -35,8 +37,8 @@
                     <a href="{{ url_for('login') }}">Log in with GitHub</a>
                 {% endif %}
             </nav>
-            <h1>snipURlnk</h1>
-            <p>Paste a long link, get a short one.</p>
+            <h1 class="logo"><img src="{{ url_for('static', filename='logo.png') }}" alt="snipURlnk: shorten and share" width="690" height="362"></h1>
+            <p class="intro">Paste a long <span class="accent">link</span>, get a short one.</p>
             <input class="p-field" type="text" id="urlInput" placeholder="Paste a long URL" aria-label="Long URL">
             <input class="p-field" type="text" id="aliasInput" placeholder="Custom alias (optional)" aria-label="Custom alias">
             <button class="p-button p-button-primary" id="shortenBtn">Shorten</button>

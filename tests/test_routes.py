@@ -496,3 +496,19 @@ def test_dashboard_has_copy_and_qr_buttons_for_each_link(client, with_secret_key
 def test_home_page_does_not_declare_the_qr_state_twice(client):
     # qr.js declares currentQr; declaring it again in the page breaks the whole script
     assert text(client.get("/")).count("let currentQr") == 0
+
+@pytest.mark.parametrize("path", ["/", "/report", "/no-such-code"])
+def test_pages_are_always_dark(client, path):
+    page = text(client.get(path))
+    assert 'class="p-dark-mode"' in page
+    assert "p-auto-dark-mode" not in page
+
+
+def test_dashboard_is_always_dark(client, with_secret_key):
+    log_in_as(client)
+    assert 'class="p-dark-mode"' in text(client.get("/dashboard"))
+
+def test_home_page_logo_is_served(client):
+    page = text(client.get("/"))
+    assert 'src="/static/logo.png"' in page
+    assert client.get("/static/logo.png").status_code == 200
