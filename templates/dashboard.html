@@ -31,6 +31,11 @@
                             <span class="dest">{{ url }}</span>
                             <span class="meta">{{ clicks }} click{{ '' if clicks == 1 else 's' }} · Created {{ created_at.strftime('%d %b %Y') if created_at else 'on an unknown date' }}</span>
                             <span class="actions">
+                                <button type="button" class="p-button p-button-default copy-btn"
+                                        data-short="{{ url_for('follow_link', code=code, _external=True) }}">Copy</button>
+                                <button type="button" class="p-button p-button-default qr-btn"
+                                        data-short="{{ url_for('follow_link', code=code, _external=True) }}"
+                                        data-code="{{ code }}">QR code</button>
                                 <button type="button" class="p-button p-button-default remove-btn"
                                         data-action="{{ url_for('remove', code=code) }}"
                                         data-short="{{ url_for('follow_link', code=code, _external=True) }}">Remove</button>
@@ -53,6 +58,8 @@
             </form>
         </dialog>
 
+        {% include "_qr_dialog.html" %}
+
         <script>
         const removeDialog = document.getElementById("removeDialog");
         const removeForm = document.getElementById("removeForm");
@@ -68,6 +75,26 @@
 
         document.getElementById("removeCancel").addEventListener("click", function () {
             removeDialog.close();
+        });
+
+        document.querySelectorAll(".copy-btn").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                try {
+                    await navigator.clipboard.writeText(button.dataset.short);
+                    button.textContent = "Copied!";
+                } catch (error) {
+                    button.textContent = "Failed";
+                }
+                setTimeout(function () { button.textContent = "Copy"; }, 1500);
+            });
+        });
+
+        document.querySelectorAll(".qr-btn").forEach(function (button) {
+            // If the QR library didn't load, the page still works, just without this button.
+            if (typeof qrcode !== "function") { button.remove(); return; }
+            button.addEventListener("click", function () {
+                openQr(button.dataset.short, button.dataset.code);
+            });
         });
         </script>
     </body>

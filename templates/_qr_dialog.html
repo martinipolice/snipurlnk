@@ -1,0 +1,15 @@
+<dialog id="qrDialog" aria-labelledby="qrTitle">
+    <h2 id="qrTitle">QR code</h2>
+    <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
+    <p id="qrLink"></p>
+    <button type="button" class="p-button p-button-primary" id="qrDownload">Download PNG</button>
+    <button type="button" class="p-button p-button-default" id="qrShare">Share</button>
+    <button type="button" class="p-button p-button-default" id="qrCopy">Copy link</button>
+    <button type="button" class="p-button p-button-default" id="qrClose">Close</button>
+    <p id="qrMessage" role="status"></p>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"
+        integrity="sha256-GK45n4EYK8nekW6cd7GV3yDMWNby1VpisIWimfG/F4A="
+        crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='qr.js') }}"></script>

@@ -482,3 +482,13 @@ def test_dashboard_has_a_remove_button_for_each_of_your_links(client, with_secre
     page = text(client.get("/dashboard"))
     assert 'data-action="/remove/mylink1"' in page
     assert 'id="removeDialog"' in page
+
+def test_dashboard_has_copy_and_qr_buttons_for_each_link(client, with_secret_key):
+    from shorten import shorten
+
+    me = log_in_as(client)
+    shorten("https://mine.example/page", "mylink1", me)
+    page = text(client.get("/dashboard"))
+    assert 'class="p-button p-button-default copy-btn"' in page
+    assert 'data-code="mylink1"' in page
+    assert 'id="qrDialog"' in page and "qrcode-generator@1.4.4" in page
