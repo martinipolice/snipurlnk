@@ -398,3 +398,42 @@ def test_a_cookie_for_a_missing_user_does_not_break_shortening(client, with_secr
     response = client.post("/shorten", data={"url": "https://example.com"})
     assert response.status_code == 200
     assert owner_of(text(response)) is None
+
+# ---- the dashboard ----
+
+def test_dashboard_sends_logged_out_visitors_to_login(client):
+    response = client.get("/dashboard")
+    assert response.status_code == 302 and response.headers["Location"].endswith("/login")
+
+
+def test_dashboard_lists_only_your_links(client, with_secret_key):
+    from shorten import shorten, upsert_user
+
+    me = log_in_as(client, "octocat", 1)
+    other = upsert_user(2, "someoneelse")
+    shorten("https://mine.example/page", "mylink1", me)
+    shorten("https://theirs.example/page", "theirlink1", other)
+
+    response = client.get("/dashboard")
+    page = text(response)
+    assert response.status_code == 200
+    assert "mylink1" in page and "https://mine.example/page" in page
+    assert "theirlink1" not in page and "theirs.example" not in page
+    assert "no-store" in response.headers["Cache-Control"]
+
+
+def test_dashboard_says_so_when_you_have_no_links(client, with_secret_key):
+    log_in_as(client)
+    assert "haven't made any links" in text(client.get("/dashboard"))
+
+
+def test_dashboard_with_a_cookie_for_a_missing_user_goes_to_login(client, with_secret_key):
+    with client.session_transaction() as s:
+        s["user_id"] = 999999
+    response = client.get("/dashboard")
+    assert response.status_code == 302 and response.headers["Location"].endswith("/login")
+
+
+def test_home_page_links_to_the_dashboard_when_logged_in(client, with_secret_key):
+    log_in_as(client)
+    assert 'href="/dashboard"' in text(client.get("/"))

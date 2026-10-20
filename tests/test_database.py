@@ -1,6 +1,6 @@
 import random
 import pytest
-from shorten import add_report, expand, get_conn, get_user, init_db, record_click, shorten, upsert_user
+from shorten import add_report, expand, get_conn, get_user, init_db, record_click, shorten, upsert_user, list_links
 
 
 def query(sql, params=()):
@@ -184,3 +184,17 @@ def test_a_link_made_with_an_owner_records_the_owner_and_creation_time(db):
 def test_a_link_made_without_an_owner_has_no_owner_but_has_a_creation_time(db):
     code = shorten("https://example.com")
     assert query("SELECT owner_id, created_at IS NOT NULL FROM links WHERE code = %s", (code,)) == [(None, True)]
+
+def test_list_links_returns_only_this_owners_live_links_newest_first(db):
+    me = upsert_user(1, "me")
+    other = upsert_user(2, "other")
+    first = shorten("https://one.example", None, me)
+    second = shorten("https://two.example", None, me)
+    shorten("https://theirs.example", None, other)
+    shorten("https://nobody.example")
+    gone = shorten("https://gone.example", None, me)
+    with get_conn() as conn:
+        conn.execute("UPDATE links SET removed = 1 WHERE code = %s", (gone,))
+
+    rows = list_links(me)
+    assert [row[0] for row in rows] == [second, first]

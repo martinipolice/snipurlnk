@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <title>Your links - snipURlnk</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+
+    <body class="p-auto-dark-mode">
+        <main class="wide">
+            <nav class="account" aria-label="Account">
+                <a class="back" href="{{ url_for('home') }}">Back to snipURlnk</a>
+                <span>Logged in as <strong>{{ current_user[1] }}</strong></span>
+                <form method="post" action="{{ url_for('logout') }}">
+                    <button type="submit" class="p-button p-button-default">Log out</button>
+                </form>
+            </nav>
+
+            <h1>Your links</h1>
+
+            {% if links %}
+                <p>Links you made while logged in.{% if links|length >= limit %} Showing your newest {{ limit }}.{% endif %}</p>
+                <ul class="link-list">
+                    {% for code, url, clicks, created_at in links %}
+                        <li>
+                            <span class="short">{{ url_for('follow_link', code=code, _external=True) }}</span>
+                            <span class="dest">{{ url }}</span>
+                            <span class="meta">{{ clicks }} click{{ '' if clicks == 1 else 's' }} · Created {{ created_at.strftime('%d %b %Y') if created_at else 'on an unknown date' }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>You haven't made any links while logged in yet. Links you make from the <a href="{{ url_for('home') }}">home page</a> will show up here.</p>
+            {% endif %}
+        </main>
+    </body>
+
+</html>

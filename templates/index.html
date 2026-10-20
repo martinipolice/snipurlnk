@@ -27,6 +27,7 @@
             <nav class="account" aria-label="Account">
                 {% if current_user %}
                     <span>Logged in as <strong>{{ current_user[1] }}</strong></span>
+                    <a href="{{ url_for('dashboard') }}">Your links</a>
                     <form method="post" action="{{ url_for('logout') }}">
                         <button type="submit" class="p-button p-button-default">Log out</button>
                     </form>

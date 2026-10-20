@@ -75,3 +75,20 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.25rem; }
 
 .account form { margin: 0; }
 .account .p-button { width: auto; margin: 0; }
+
+.account { flex-wrap: wrap; }
+.account .back { margin-right: auto; }
+
+main.wide { max-width: 40rem; }
+
+.link-list { list-style: none; margin: 0; padding: 0; }
+.link-list li {
+    display: grid;
+    gap: .25rem;
+    padding: .9rem 0;
+    border-top: 1px solid light-dark(#D2D2D7, #38383A);
+}
+.link-list li:last-child { border-bottom: 1px solid light-dark(#D2D2D7, #38383A); }
+.link-list .short { font-family: ui-monospace, "SF Mono", monospace; overflow-wrap: anywhere; }
+.link-list .dest { color: light-dark(#6E6E73, #98989D); overflow-wrap: anywhere; }
+.link-list .meta { font-size: .85rem; color: light-dark(#6E6E73, #98989D); }

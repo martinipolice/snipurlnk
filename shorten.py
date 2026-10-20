@@ -145,3 +145,13 @@ def add_report(text, reason): # saves a report and returns the code, or None if 
         conn.execute("INSERT INTO reports (code, reason) VALUES (%s, %s)", (row[0], reason))
 
     return row[0]
+
+def list_links(owner_id, limit=200):  # a person's live links, newest first: (code, url, clicks, created_at)
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT code, url, clicks, created_at
+            FROM links
+            WHERE owner_id = %s AND removed = 0
+            ORDER BY created_at DESC NULLS LAST, code
+            LIMIT %s
+        """, (owner_id, limit)).fetchall()

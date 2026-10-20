@@ -4,8 +4,8 @@ from datetime import timedelta
 import requests
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.flask_client import OAuth
-from flask import Flask, request, redirect, render_template, abort, session, url_for
-from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db, upsert_user, get_user
+from flask import Flask, request, redirect, render_template, abort, session, url_for, make_response
+from shorten import shorten, expand, is_valid_url, normalize_url, is_valid_alias, record_click, add_report, init_db, upsert_user, get_user, list_links
 from werkzeug.middleware.proxy_fix import ProxyFix
 from safety import is_flagged
 
@@ -142,6 +142,19 @@ def github_callback():
 def logout():
     session.clear()
     return redirect("/", code=303)
+
+DASHBOARD_LIMIT = 200
+
+
+@app.route("/dashboard")
+def dashboard():
+    user_id = session.get("user_id")
+    user = get_user(user_id) if user_id else None
+    if user is None:
+        return redirect(url_for("login"))
+    response = make_response(render_template("dashboard.html", links=list_links(user[0], DASHBOARD_LIMIT), limit=DASHBOARD_LIMIT))
+    response.headers["Cache-Control"] = "private, no-store"  # a personal page: never keep a copy where someone else could see it
+    return response
 
 @app.route("/<code>")
 def follow_link(code):
