@@ -4,31 +4,103 @@
 
     <head>
         <title>Report a link - snipURlnk</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+        {% include "_head.html" %}
     </head>
 
     <body class="p-dark-mode">
+        {% include "_header.html" %}
+
         <main>
-            <h1>Report a link</h1>
-            <p>Paste the short link you want us to review.</p>
-            <input class="p-field" type="text" id="linkInput" placeholder="Short link or code" aria-label="Short link or code">
-            <input class="p-field" type="text" id="reasonInput" maxlength="200" placeholder="Reason (optional)" aria-label="Reason">
-            <button class="p-button p-button-primary" id="reportBtn">Report</button>
-            <div id="result" aria-live="polite"></div>
-            <p><a href="{{ url_for('home') }}">Back to snipURlnk</a></p>
+            <div class="page-title">
+                <div>
+                    <h1>Report a link</h1>
+                    <p>Seen a short link pointing somewhere harmful? Tell us and we'll review it.</p>
+                </div>
+            </div>
+
+            <section aria-label="Report form">
+                <div class="field-group">
+                    <label for="linkInput">Short link or code</label>
+                    <input class="field" type="text" id="linkInput" autocomplete="off" spellcheck="false"
+                           placeholder="{{ request.host }}/abc123" aria-describedby="linkError">
+                    <p class="field-error" id="linkError"></p>
+                </div>
+
+                <div class="field-group">
+                    <label for="reasonInput">Reason <span class="optional">optional</span><span class="counter" id="reasonCount" aria-hidden="true">0/200</span></label>
+                    <input class="field" type="text" id="reasonInput" maxlength="200" placeholder="Phishing, malware, spam…">
+                </div>
+
+                <button type="button" class="btn btn-primary btn-block btn-large" id="reportBtn">Send report</button>
+                <div id="result" aria-live="polite"></div>
+            </section>
+
+            <footer class="page-footer">
+                <a href="{{ url_for('home') }}">Back to snipURlnk</a>
+            </footer>
         </main>
 
         <script>
         const linkInput = document.getElementById("linkInput");
         const reasonInput = document.getElementById("reasonInput");
+        const reasonCount = document.getElementById("reasonCount");
         const reportBtn = document.getElementById("reportBtn");
         const result = document.getElementById("result");
+        const linkError = document.getElementById("linkError");
+        const ICONS = "{{ url_for('static', filename='icons.svg') }}";
+
+        // The server answers in short phrases; these two belong next to the link field.
+        const LINK_ERRORS = {
+            "Missing link": "Paste the short link you want to report.",
+            "Link not found": "We couldn't find a live link with that code. Check it and try again."
+        };
+
+        function icon(name) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "icon");
+            svg.setAttribute("aria-hidden", "true");
+            const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+            use.setAttribute("href", ICONS + "#i-" + name);
+            svg.appendChild(use);
+            return svg;
+        }
+
+        function showAlert(kind, message) {
+            const box = document.createElement("div");
+            box.className = "alert alert-" + kind;
+            if (kind === "error") box.setAttribute("role", "alert");
+            const text = document.createElement("span");
+            text.textContent = message;
+            box.append(icon(kind === "error" ? "alert" : "check"), text);
+            result.replaceChildren(box);
+        }
+
+        function clearErrors() {
+            linkInput.removeAttribute("aria-invalid");
+            linkError.textContent = "";
+            result.replaceChildren();
+        }
+
+        reasonInput.addEventListener("input", function () {
+            reasonCount.textContent = reasonInput.value.length + "/200";
+        });
+
+        linkInput.addEventListener("input", function () {
+            if (linkInput.getAttribute("aria-invalid")) clearErrors();
+        });
+
+        [linkInput, reasonInput].forEach(function (input) {
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") reportBtn.click();
+            });
+        });
 
         reportBtn.addEventListener("click", async function () {
+            if (reportBtn.disabled) return;
+            clearErrors();
+            reportBtn.disabled = true;
+            reportBtn.textContent = "Sending…";
+
             let response;
             try {
                 response = await fetch("/report", {
@@ -36,13 +108,27 @@
                     body: new URLSearchParams({ link: linkInput.value, reason: reasonInput.value })
                 });
             } catch (error) {
-                result.className = "error";
-                result.textContent = "Network error";
-                return;
+                response = null;
             }
 
-            result.className = response.ok ? "" : "error";
-            result.textContent = await response.text();
+            const text = response ? await response.text() : "";
+            reportBtn.disabled = false;
+            reportBtn.textContent = "Send report";
+
+            if (!response) {
+                showAlert("error", "Network error. Check your connection and try again.");
+            } else if (response.ok) {
+                showAlert("success", text);
+                linkInput.value = "";
+                reasonInput.value = "";
+                reasonCount.textContent = "0/200";
+            } else if (LINK_ERRORS[text]) {
+                linkInput.setAttribute("aria-invalid", "true");
+                linkError.replaceChildren(icon("alert"), document.createTextNode(LINK_ERRORS[text]));
+                linkInput.focus();
+            } else {
+                showAlert("error", text);
+            }
         });
         </script>
 

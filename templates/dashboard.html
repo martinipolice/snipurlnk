@@ -4,47 +4,73 @@
 
     <head>
         <title>Your links - snipURlnk</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        {% include "_head.html" %}
     </head>
 
     <body class="p-dark-mode">
-        <main class="wide">
-            <nav class="account" aria-label="Account">
-                <a class="back" href="{{ url_for('home') }}">Back to snipURlnk</a>
-                <span>Logged in as <strong>{{ current_user[1] }}</strong></span>
-                <form method="post" action="{{ url_for('logout') }}">
-                    <button type="submit" class="p-button p-button-default">Log out</button>
-                </form>
-            </nav>
+        {% include "_header.html" %}
+        {% set icons = url_for('static', filename='icons.svg') %}
 
-            <h1>Your links</h1>
+        <main>
+            <div class="page-title">
+                <div>
+                    <h1>Your links</h1>
+                    {% if links %}
+                        <p>{{ links|length }} link{{ '' if links|length == 1 else 's' }} made while logged in.{% if links|length >= limit %} Showing your newest {{ limit }}.{% endif %}</p>
+                    {% endif %}
+                </div>
+                {% if links %}
+                    <a class="btn btn-primary" href="{{ url_for('home') }}">
+                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-plus"/></svg>New link
+                    </a>
+                {% endif %}
+            </div>
 
             {% if links %}
-                <p>Links you made while logged in.{% if links|length >= limit %} Showing your newest {{ limit }}.{% endif %}</p>
+                {% if links|length > 3 %}
+                    <div class="search">
+                        <label class="visually-hidden" for="linkSearch">Search your links</label>
+                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-search"/></svg>
+                        <input class="field" type="search" id="linkSearch" placeholder="Search by code or address" autocomplete="off" spellcheck="false"
+                               data-shortcut="/" aria-keyshortcuts="/">
+                        <kbd class="search-kbd" aria-hidden="true">/</kbd>
+                    </div>
+                    <p id="noMatches" class="no-matches" role="status"></p>
+                {% endif %}
                 <ul class="link-list">
                     {% for code, url, clicks, created_at in links %}
-                        <li>
-                            <span class="short">{{ url_for('follow_link', code=code, _external=True) }}</span>
-                            <span class="dest">{{ url }}</span>
-                            <span class="meta">{{ clicks }} click{{ '' if clicks == 1 else 's' }} · Created {{ created_at.strftime('%d %b %Y') if created_at else 'on an unknown date' }}</span>
+                        {% set short = url_for('follow_link', code=code, _external=True) %}
+                        <li class="link-card" data-search="{{ (code ~ ' ' ~ url)|lower }}">
+                            <a class="short-link" href="{{ short }}" target="_blank" rel="noopener">{{ short.split('://', 1)[-1] }}</a>
+                            <span class="dest" title="{{ url }}">{{ url }}</span>
+                            <span class="meta">
+                                <span class="clicks">{{ clicks }} click{{ '' if clicks == 1 else 's' }}</span>
+                                <span>Created {{ created_at.strftime('%d %b %Y') if created_at else 'on an unknown date' }}</span>
+                            </span>
                             <span class="actions">
-                                <button type="button" class="p-button p-button-default copy-btn"
-                                        data-short="{{ url_for('follow_link', code=code, _external=True) }}">Copy</button>
-                                <button type="button" class="p-button p-button-default qr-btn"
-                                        data-short="{{ url_for('follow_link', code=code, _external=True) }}"
-                                        data-code="{{ code }}">QR code</button>
-                                <button type="button" class="p-button p-button-default remove-btn"
-                                        data-action="{{ url_for('remove', code=code) }}"
-                                        data-short="{{ url_for('follow_link', code=code, _external=True) }}">Remove</button>
+                                <button type="button" class="p-button p-button-default copy-btn" data-short="{{ short }}">
+                                    <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-copy"/></svg><span>Copy</span>
+                                </button>
+                                <button type="button" class="btn btn-small qr-btn" data-short="{{ short }}" data-code="{{ code }}">
+                                    <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-qr"/></svg>QR code
+                                </button>
+                                <button type="button" class="btn btn-small btn-quiet-danger remove-btn"
+                                        data-action="{{ url_for('remove', code=code) }}" data-short="{{ short }}">
+                                    <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-trash"/></svg>Remove
+                                </button>
                             </span>
                         </li>
                     {% endfor %}
                 </ul>
             {% else %}
-                <p>You haven't made any links while logged in yet. Links you make from the <a href="{{ url_for('home') }}">home page</a> will show up here.</p>
+                <section class="empty-state">
+                    <img src="{{ url_for('static', filename='mascot.png') }}" alt="" width="144" height="144">
+                    <h2>No links yet</h2>
+                    <p>You haven't made any links while logged in yet. Links you make from the home page will show up here, with their click counts.</p>
+                    <a class="btn btn-primary" href="{{ url_for('home') }}">
+                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-plus"/></svg>Make your first link
+                    </a>
+                </section>
             {% endif %}
         </main>
 
@@ -52,9 +78,9 @@
             <h2 id="removeTitle">Remove this link?</h2>
             <p id="removeLink" class="short"></p>
             <p>The short link will stop working. Its code stays taken, so nobody else can reuse it.</p>
-            <form method="post" id="removeForm">
-                <button type="submit" class="p-button p-button-primary">Yes, remove</button>
-                <button type="button" class="p-button p-button-default" id="removeCancel">Cancel</button>
+            <form method="post" id="removeForm" class="dialog-actions">
+                <button type="button" class="btn" id="removeCancel" autofocus>Cancel</button>
+                <button type="submit" class="btn btn-danger">Yes, remove</button>
             </form>
         </dialog>
 
@@ -73,21 +99,52 @@
             });
         });
 
+        // The page reloads after removing, so the message waits for the next page
+        removeForm.addEventListener("submit", function () {
+            toastAfterReload("Link removed");
+        });
+
         document.getElementById("removeCancel").addEventListener("click", function () {
             removeDialog.close();
         });
 
         document.querySelectorAll(".copy-btn").forEach(function (button) {
+            const label = button.querySelector("span");
+            const use = button.querySelector("use");
+            const copyIcon = use.getAttribute("href");
             button.addEventListener("click", async function () {
                 try {
                     await navigator.clipboard.writeText(button.dataset.short);
-                    button.textContent = "Copied!";
+                    label.textContent = "Copied!";
+                    use.setAttribute("href", copyIcon.replace("#i-copy", "#i-check"));
+                    showToast("Link copied");
                 } catch (error) {
-                    button.textContent = "Failed";
+                    label.textContent = "Failed";
+                    showToast("Couldn't copy the link", "error");
                 }
-                setTimeout(function () { button.textContent = "Copy"; }, 1500);
+                setTimeout(function () {
+                    label.textContent = "Copy";
+                    use.setAttribute("href", copyIcon);
+                }, 1500);
             });
         });
+
+        // Filters the list as you type; only shown when there are more than 3 links.
+        const linkSearch = document.getElementById("linkSearch");
+        if (linkSearch) {
+            const cards = document.querySelectorAll(".link-card");
+            const noMatches = document.getElementById("noMatches");
+            linkSearch.addEventListener("input", function () {
+                const query = linkSearch.value.trim().toLowerCase();
+                let shown = 0;
+                cards.forEach(function (card) {
+                    const match = card.dataset.search.includes(query);
+                    card.hidden = !match;
+                    if (match) shown += 1;
+                });
+                noMatches.textContent = shown === 0 ? "No links match “" + linkSearch.value.trim() + "”." : "";
+            });
+        }
 
         document.querySelectorAll(".qr-btn").forEach(function (button) {
             // If the QR library didn't load, the page still works, just without this button.

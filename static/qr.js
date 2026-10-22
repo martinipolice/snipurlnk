@@ -44,6 +44,13 @@ function canvasToBlob() {
     });
 }
 
+// Successes show as a toast (the text stays in qrMessage, hidden, for screen readers); problems show under the buttons.
+function qrSay(message, ok) {
+    qrMessage.textContent = message;
+    qrMessage.classList.toggle("visually-hidden", ok);
+    if (ok && typeof showToast === "function") showToast(message);
+}
+
 function openQr(shortUrl, code) {
     currentQr = { url: shortUrl, code: code };
     qrMessage.textContent = "";
@@ -56,7 +63,7 @@ function openQr(shortUrl, code) {
 qrDownload.addEventListener("click", async function () {
     const blob = await canvasToBlob();
     if (!blob) {
-        qrMessage.textContent = "Could not make the image.";
+        qrSay("Could not make the image.", false);
         return;
     }
     const objectUrl = URL.createObjectURL(blob);
@@ -67,7 +74,7 @@ qrDownload.addEventListener("click", async function () {
     link.click();
     link.remove();
     setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
-    qrMessage.textContent = "Downloaded.";
+    qrSay("QR code downloaded", true);
 });
 
 qrShare.addEventListener("click", async function () {
@@ -82,19 +89,28 @@ qrShare.addEventListener("click", async function () {
     try {
         await navigator.share(shareData);
     } catch (error) {
-        if (error.name !== "AbortError") qrMessage.textContent = "Sharing failed.";
+        if (error.name !== "AbortError") qrSay("Sharing failed.", false);
     }
 });
 
 qrCopy.addEventListener("click", async function () {
     try {
         await navigator.clipboard.writeText(currentQr.url);
-        qrMessage.textContent = "Link copied.";
+        qrSay("Link copied", true);
     } catch (error) {
-        qrMessage.textContent = "Could not copy the link.";
+        qrSay("Could not copy the link.", false);
     }
 });
 
 qrClose.addEventListener("click", function () {
     qrDialog.close();
+});
+
+// A click on the dimmed area outside the dialog closes it too.
+qrDialog.addEventListener("click", function (event) {
+    if (event.target !== qrDialog) return;
+    const box = qrDialog.getBoundingClientRect();
+    const outside = event.clientX < box.left || event.clientX > box.right ||
+                    event.clientY < box.top || event.clientY > box.bottom;
+    if (outside) qrDialog.close();
 });
