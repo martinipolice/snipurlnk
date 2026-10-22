@@ -1,0 +1,46 @@
+{# Same header on every page. The home page sets hide_brand, because its big logo is the heading. #}
+{% set icons = url_for('static', filename='icons.svg') %}
+<header class="site-header">
+    {% if not hide_brand %}
+        <a class="brand" href="{{ url_for('home') }}" aria-label="snipURlnk home">
+            <img src="{{ url_for('static', filename='mascot.png') }}" alt="" width="44" height="44">
+            <span>snip<span class="accent">UR</span>lnk</span>
+        </a>
+    {% endif %}
+    <nav class="account" aria-label="Account">
+        {% if current_user %}
+            <a href="{{ url_for('dashboard') }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}>Your links</a>
+
+            {# Account dropdown menu, modelled on shadcn/ui's DropdownMenu; ui.js opens it and handles the keys #}
+            <div class="menu-wrap">
+                <button type="button" class="menu-trigger" id="accountTrigger" aria-haspopup="menu" aria-expanded="false"
+                        aria-controls="accountMenu" data-tooltip="Account" data-tooltip-side="bottom">
+                    <span class="avatar" aria-hidden="true">{{ current_user[1][:1]|upper }}</span>
+                    <span class="username">{{ current_user[1] }}</span>
+                    <svg class="icon chevron" aria-hidden="true"><use href="{{ icons }}#i-chevron"/></svg>
+                    <span class="visually-hidden">Account menu</span>
+                </button>
+                <div class="menu" id="accountMenu" role="menu" aria-labelledby="accountTrigger" hidden>
+                    <p class="menu-label">Logged in as <strong>{{ current_user[1] }}</strong></p>
+                    <div class="menu-separator" role="separator"></div>
+                    <a class="menu-item" role="menuitem" tabindex="-1" href="{{ url_for('dashboard') }}">
+                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-link"/></svg>Your links
+                    </a>
+                    <a class="menu-item" role="menuitem" tabindex="-1" href="{{ url_for('report_page') }}">
+                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-flag"/></svg>Report a link
+                    </a>
+                    <div class="menu-separator" role="separator"></div>
+                    <form method="post" action="{{ url_for('logout') }}">
+                        <button type="submit" class="menu-item menu-item-danger" role="menuitem" tabindex="-1">
+                            <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-logout"/></svg>Log out
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <a class="login" href="{{ url_for('login') }}">
+                <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-github"/></svg>Log in with GitHub
+            </a>
+        {% endif %}
+    </nav>
+</header>

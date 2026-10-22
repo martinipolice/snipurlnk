@@ -4,13 +4,7 @@
 
     <head>
         <title>snipURlnk</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins@5.2.7/latin-400.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins@5.2.7/latin-600.css">
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-        <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+        {% include "_head.html" %}
         <meta name="description" content="Paste a long link, get a short one. Free, with custom aliases and QR codes.">
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="snipURlnk">
@@ -25,25 +19,50 @@
     </head>
 
     <body class="p-dark-mode">
+        {% set hide_brand = true %}
+        {% include "_header.html" %}
+
         <main>
-            <nav class="account" aria-label="Account">
-                {% if current_user %}
-                    <span>Logged in as <strong>{{ current_user[1] }}</strong></span>
-                    <a href="{{ url_for('dashboard') }}">Your links</a>
-                    <form method="post" action="{{ url_for('logout') }}">
-                        <button type="submit" class="p-button p-button-default">Log out</button>
-                    </form>
-                {% else %}
-                    <a href="{{ url_for('login') }}">Log in with GitHub</a>
-                {% endif %}
-            </nav>
-            <h1 class="logo"><img src="{{ url_for('static', filename='logo.png') }}" alt="snipURlnk: shorten and share" width="690" height="362"></h1>
-            <p class="intro">Paste a long <span class="accent">link</span>, get a short one.</p>
-            <input class="p-field" type="text" id="urlInput" placeholder="Paste a long URL" aria-label="Long URL">
-            <input class="p-field" type="text" id="aliasInput" placeholder="Custom alias (optional)" aria-label="Custom alias">
-            <button class="p-button p-button-primary" id="shortenBtn">Shorten</button>
-            <div id="result" aria-live="polite"></div>
-            <p><a href="{{ url_for('report_page') }}">Report a link</a></p>
+            <div class="hero">
+                <h1 class="logo"><img src="{{ url_for('static', filename='logo.png') }}" alt="snipURlnk: shorten and share" width="690" height="362"></h1>
+                <p class="lede">Paste a long <span class="accent">link</span>, get a short one.</p>
+            </div>
+
+            <section aria-label="Shorten a link">
+                <div class="field-group">
+                    <label for="urlInput">Long URL</label>
+                    <input class="field" type="text" id="urlInput" inputmode="url" autocomplete="off" spellcheck="false" autofocus
+                           placeholder="https://example.com/a/very/long/link" aria-describedby="urlError">
+                    <p class="field-error" id="urlError"></p>
+                </div>
+
+                <div class="field-group">
+                    <label for="aliasInput">Custom alias <span class="optional">optional</span></label>
+                    <div class="field field-prefix">
+                        <span aria-hidden="true">{{ request.host }}/</span>
+                        <input type="text" id="aliasInput" autocomplete="off" spellcheck="false" maxlength="30"
+                               placeholder="my-link" aria-describedby="aliasHint aliasError">
+                    </div>
+                    <p class="hint" id="aliasHint">3 to 30 letters, numbers, - or _</p>
+                    <p class="field-error" id="aliasError"></p>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-block btn-large" id="shortenBtn">Shorten</button>
+                <p class="kbd-hint" aria-hidden="true">or press <kbd>Enter</kbd></p>
+                <div id="result" aria-live="polite"></div>
+            </section>
+
+            {% set icons = url_for('static', filename='icons.svg') %}
+            <ul class="features" aria-label="What you get">
+                <li><svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-link"/></svg>Custom aliases</li>
+                <li><svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-qr"/></svg>QR codes</li>
+                <li><svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-shield"/></svg>Safety-checked links</li>
+            </ul>
+
+            <footer class="page-footer">
+                <a href="{{ url_for('report_page') }}">Report a link</a>
+                {% if current_user %}<a href="{{ url_for('dashboard') }}">Your links</a>{% endif %}
+            </footer>
         </main>
 
         {% include "_qr_dialog.html" %}
@@ -53,16 +72,97 @@
         const aliasInput = document.getElementById("aliasInput");
         const shortenBtn = document.getElementById("shortenBtn");
         const result = document.getElementById("result");
+        const urlError = document.getElementById("urlError");
+        const aliasError = document.getElementById("aliasError");
+        const ICONS = "{{ url_for('static', filename='icons.svg') }}";
+
+        // The server answers in short phrases; these say the same thing in plainer words, next to the field it's about.
+        const FIELD_ERRORS = {
+            "Missing url": [urlInput, urlError, "Paste a link to shorten."],
+            "Invalid URL": [urlInput, urlError, "That doesn't look like a web address."],
+            "Invalid alias": [aliasInput, aliasError, "Use 3 to 30 letters, numbers, - or _. Some words are reserved."],
+            "Alias already taken": [aliasInput, aliasError, "That alias is taken. Try another one."]
+        };
+
+        function icon(name) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "icon");
+            svg.setAttribute("aria-hidden", "true");
+            const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+            use.setAttribute("href", ICONS + "#i-" + name);
+            svg.appendChild(use);
+            return svg;
+        }
+
+        function button(label, iconName, className) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn " + className;
+            setLabel(btn, label, iconName);
+            return btn;
+        }
+
+        function setLabel(btn, label, iconName) {
+            btn.replaceChildren(icon(iconName), document.createTextNode(label));
+        }
+
+        function clearErrors() {
+            [[urlInput, urlError], [aliasInput, aliasError]].forEach(function (pair) {
+                pair[0].removeAttribute("aria-invalid");
+                pair[1].textContent = "";
+            });
+        }
+
+        function showError(message) {
+            const known = FIELD_ERRORS[message];
+            if (known) {
+                result.replaceChildren();
+                known[0].setAttribute("aria-invalid", "true");
+                known[1].replaceChildren(icon("alert"), document.createTextNode(known[2]));
+                known[0].focus();
+                return;
+            }
+            const box = document.createElement("div");
+            box.className = "alert alert-error";
+            box.setAttribute("role", "alert");
+            const text = document.createElement("span");
+            text.textContent = message;
+            box.append(icon("alert"), text);
+            result.replaceChildren(box);
+        }
+
+        function setBusy(busy) {
+            shortenBtn.disabled = busy;
+            shortenBtn.setAttribute("aria-busy", busy ? "true" : "false");
+            if (busy) {
+                const spinner = document.createElement("span");
+                spinner.className = "spinner";
+                spinner.setAttribute("aria-hidden", "true");
+                shortenBtn.replaceChildren(spinner, document.createTextNode("Shortening…"));
+            } else {
+                shortenBtn.textContent = "Shorten";
+            }
+        }
 
         [urlInput, aliasInput].forEach(function (input) {
             input.addEventListener("keydown", function (event) {
                 if (event.key === "Enter") shortenBtn.click();
             });
+            input.addEventListener("input", function () {
+                if (input.getAttribute("aria-invalid")) clearErrors();
+            });
         });
 
+        // Clicking the address in front of the alias puts the cursor in the alias.
+        aliasInput.parentElement.addEventListener("click", function () { aliasInput.focus(); });
+
         shortenBtn.addEventListener("click", async function () {
+            if (shortenBtn.disabled) return;
             const longUrl = urlInput.value;
             const alias = aliasInput.value;
+
+            clearErrors();
+            setBusy(true);
 
             let response;
             try {
@@ -70,70 +170,86 @@
                    "/shorten", {
                     method: "POST",
                     body: new URLSearchParams({ url: longUrl, alias: alias })
-                    }   
+                    }
                 );
             } catch (error) {
-                result.className = "error";
-                result.textContent = "Network error";
+                setBusy(false);
+                showError("Network error. Check your connection and try again.");
                 return;
             }
 
-            result.className = response.ok ? "" : "error";
+            const text = await response.text();
+            setBusy(false);
 
             if (!response.ok) {
-                result.textContent = await response.text();
+                showError(text);
                 return;
             }
 
-            const code = await response.text();
+            const code = text;
             const shortUrl = window.location.origin + "/" + code;
 
-            const urlText = document.createElement("span");
-            urlText.textContent = shortUrl;
+            const card = document.createElement("div");
+            card.className = "result-card";
 
-            const copyBtn = document.createElement("button");
-            copyBtn.className = "p-button p-button-default";
-            copyBtn.textContent = "Copy";
+            const label = document.createElement("p");
+            label.className = "result-label";
+            label.append(icon("check"), document.createTextNode("Your short link is ready"));
 
+            const row = document.createElement("div");
+            row.className = "result-row";
+
+            const link = document.createElement("a");
+            link.className = "short-link";
+            link.href = shortUrl;
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = window.location.host + "/" + code;
+
+            const copyBtn = button("Copy", "copy", "btn-primary");
             copyBtn.addEventListener("click", async function () {
                 try {
                     await navigator.clipboard.writeText(shortUrl);
-                    copyBtn.textContent = "Copied!";      // success message
+                    setLabel(copyBtn, "Copied!", "check");      // success message
+                    showToast("Link copied");
                 } catch (error) {
-                    copyBtn.textContent = "Failed";      // failure message
+                    setLabel(copyBtn, "Failed", "alert");       // failure message
+                    showToast("Couldn't copy the link", "error");
                 }
 
                 setTimeout(function () {
-                    copyBtn.textContent = "Copy";
+                    setLabel(copyBtn, "Copy", "copy");
                 }, 1500);
             });
 
+            row.append(link, copyBtn);
 
-            const goBtn = document.createElement("button");
-            goBtn.className = "p-button p-button-default";
-            goBtn.textContent = "Go";
+            // Where the short link goes, so people can check it before sharing
+            const dest = document.createElement("p");
+            dest.className = "result-dest";
+            dest.title = longUrl.trim();
+            dest.textContent = "Goes to " + longUrl.trim();
+
+            const actions = document.createElement("div");
+            actions.className = "result-actions";
+
+            const goBtn = button("Open", "open", "btn-small");
             goBtn.addEventListener("click", function () {
                 window.open(shortUrl, "_blank");
             });
-
-            result.textContent = "";
-            result.appendChild(urlText);
-            result.appendChild(document.createTextNode(" "));
-            result.appendChild(copyBtn);
-            result.appendChild(document.createTextNode(" "));
-            result.appendChild(goBtn);
+            actions.appendChild(goBtn);
 
             // If the QR library didn't load, the page still works, just without this button.
             if (typeof qrcode === "function") {
-                const qrBtn = document.createElement("button");
-                qrBtn.className = "p-button p-button-default";
-                qrBtn.textContent = "QR code";
+                const qrBtn = button("QR code", "qr", "btn-small");
                 qrBtn.addEventListener("click", function () {
                     openQr(shortUrl, code);
                 });
-                result.appendChild(document.createTextNode(" "));
-                result.appendChild(qrBtn);
+                actions.appendChild(qrBtn);
             }
+
+            card.append(label, row, dest, actions);
+            result.replaceChildren(card);
             });
 
         </script>

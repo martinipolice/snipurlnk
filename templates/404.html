@@ -4,23 +4,25 @@
 
     <head>
         <title>Link not found - snipURlnk</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codedgar/puppertino@2.0.0/dist/css/puppertino.min.css">
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-          <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+        {% include "_head.html" %}
     </head>
 
     <body class="p-dark-mode">
-        <main>
+        {% include "_header.html" %}
+
+        <main class="not-found">
+            <img src="{{ url_for('static', filename='mascot.png') }}" alt="" width="176" height="176">
+            <p class="eyebrow">404</p>
             <h1>Link not found</h1>
             <p>This link doesn't exist, or it was removed.</p>
 
             <p id="countdownStatus" class="visually-hidden" role="status"></p>
-            <div id="countdown"></div>
+            <div id="countdown" class="countdown"></div>
 
-            <p><a id="homeLink" href="{{ url_for('home') }}">Go to snipURlnk now</a></p>
-            <p><a href="/report">Report a link</a></p>
+            <div class="button-row">
+                <a id="homeLink" class="btn btn-primary" href="{{ url_for('home') }}">Go to snipURlnk now</a>
+                <a class="btn" href="/report">Report a link</a>
+            </div>
         </main>
 
         <script>
@@ -34,12 +36,18 @@
         const countdownText = document.createElement("p");
         countdownText.setAttribute("aria-hidden", "true");
 
+        // A bar that empties over the countdown (hidden when the visitor asks for less motion)
+        const bar = document.createElement("div");
+        bar.className = "countdown-bar";
+        bar.setAttribute("aria-hidden", "true");
+        bar.appendChild(document.createElement("span"));
+
         const stopButton = document.createElement("button");
         stopButton.type = "button";
-        stopButton.className = "p-button";
+        stopButton.className = "btn btn-ghost btn-small";
         stopButton.textContent = "Stop countdown";
 
-        countdown.append(countdownText, stopButton);
+        countdown.append(countdownText, bar, stopButton);
         countdownStatus.textContent = "You will be taken to the home page in " + START_SECONDS +
             " seconds. Use the Stop countdown button to stay on this page.";
 
@@ -63,6 +71,7 @@
             countdownText.removeAttribute("aria-hidden");
             countdownText.textContent = "Countdown stopped. You can stay on this page.";
             stopButton.remove();
+            bar.remove();
             countdownStatus.textContent = "";
             homeLink.focus();
         });

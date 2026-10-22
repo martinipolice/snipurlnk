@@ -1,11 +1,23 @@
 <dialog id="qrDialog" aria-labelledby="qrTitle">
-    <h2 id="qrTitle">QR code</h2>
-    <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
+    <div class="dialog-head">
+        <h2 id="qrTitle">QR code</h2>
+        <button type="button" class="btn btn-icon" id="qrClose" aria-label="Close" data-tooltip="Close" data-tooltip-side="left">
+            <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#i-close"/></svg>
+        </button>
+    </div>
+    <div class="qr-tile"><canvas id="qrCanvas" role="img" aria-label="QR code"></canvas></div>
     <p id="qrLink"></p>
-    <button type="button" class="p-button p-button-primary" id="qrDownload">Download PNG</button>
-    <button type="button" class="p-button p-button-default" id="qrShare">Share</button>
-    <button type="button" class="p-button p-button-default" id="qrCopy">Copy link</button>
-    <button type="button" class="p-button p-button-default" id="qrClose">Close</button>
+    <div class="qr-actions">
+        <button type="button" class="btn btn-primary" id="qrDownload">
+            <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#i-download"/></svg>Download PNG
+        </button>
+        <button type="button" class="btn" id="qrShare">
+            <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#i-share"/></svg>Share
+        </button>
+        <button type="button" class="btn" id="qrCopy">
+            <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#i-copy"/></svg>Copy link
+        </button>
+    </div>
     <p id="qrMessage" role="status"></p>
 </dialog>
 
