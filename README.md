@@ -228,4 +228,4 @@ Next:
 
 ## License
 
-No license has been chosen yet, so by default all rights are reserved. If you want to reuse the code, please open an issue first.
+snipURlnk is released under the MIT License. See [LICENSE](LICENSE) for the full text.
