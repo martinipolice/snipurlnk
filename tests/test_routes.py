@@ -56,7 +56,7 @@ def test_shorten_rejects_bad_input(client, data, status, message):
 
 def test_shorten_creates_a_link_that_redirects(client):
     response = client.post("/shorten", data={"url": "example.com"})
-    code = text(response)
+    code = response.get_json()["code"]
     assert response.status_code == 200
     assert len(code) == 6
 
@@ -67,7 +67,7 @@ def test_shorten_creates_a_link_that_redirects(client):
 
 def test_alias_taken_in_another_case_is_409(client):
     first = client.post("/shorten", data={"url": "example.com", "alias": "MySite"})
-    assert (first.status_code, text(first)) == (200, "MySite")
+    assert (first.status_code, first.get_json()["code"]) == (200, "MySite")
 
     second = client.post("/shorten", data={"url": "other.com", "alias": "mysite"})
     assert (second.status_code, text(second)) == (409, "Alias already taken")
@@ -383,12 +383,12 @@ def owner_of(code):
 
 def test_a_link_made_while_logged_in_belongs_to_you(client, with_secret_key):
     user_id = log_in_as(client)
-    code = text(client.post("/shorten", data={"url": "https://example.com"}))
+    code = client.post("/shorten", data={"url": "https://example.com"}).get_json()["code"]
     assert owner_of(code) == user_id
 
 
 def test_a_link_made_while_logged_out_has_no_owner(client):
-    code = text(client.post("/shorten", data={"url": "https://example.com"}))
+    code = client.post("/shorten", data={"url": "https://example.com"}).get_json()["code"]
     assert owner_of(code) is None
 
 
@@ -397,7 +397,7 @@ def test_a_cookie_for_a_missing_user_does_not_break_shortening(client, with_secr
         s["user_id"] = 999999
     response = client.post("/shorten", data={"url": "https://example.com"})
     assert response.status_code == 200
-    assert owner_of(text(response)) is None
+    assert owner_of(response.get_json()["code"]) is None
 
 # ---- the dashboard ----
 
@@ -512,3 +512,63 @@ def test_home_page_logo_is_served(client):
     page = text(client.get("/"))
     assert 'src="/static/logo.png"' in page
     assert client.get("/static/logo.png").status_code == 200
+# ---- small fixes: stored URL, server errors, remove toast, menu ARIA ----
+
+def test_shorten_returns_the_normalised_url_that_was_stored(client):
+    response = client.post("/shorten", data={"url": "  example.com  "})
+    data = response.get_json()
+    assert data["url"] == "https://example.com"
+    assert query("SELECT url FROM links WHERE code = %s", (data["code"],)) == [("https://example.com",)]
+
+
+def test_home_page_shows_the_stored_url_not_the_typed_one(client):
+    page = text(client.get("/"))
+    assert '"Goes to " + storedUrl' in page and "storedUrl = data.url" in page
+    assert "longUrl.trim()" not in page
+
+
+def test_home_page_has_a_friendly_message_for_server_errors(client):
+    page = text(client.get("/"))
+    assert "Something went wrong on our side. Please try again." in page
+    assert "response.status >= 500" in page and "JSON.parse(text)" in page
+
+
+def test_dashboard_queues_the_removed_toast_only_after_the_server_answers(client, with_secret_key):
+    from shorten import shorten
+
+    shorten("https://mine.example/page", "mylink1", log_in_as(client))
+    page = text(client.get("/dashboard"))
+    request_sent = page.index("await fetch(removeForm.action")
+    assert page.index('toastAfterReload("Link removed")') > request_sent
+    assert page.index("showToast(\"Couldn't remove the link") > request_sent
+
+
+def test_account_menu_holds_only_menu_items_and_separators(client, with_secret_key):
+    from html.parser import HTMLParser
+
+    class MenuChildren(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.depth = 0  # depth inside the role="menu" element, 0 = outside
+            self.tags = []
+
+        def handle_starttag(self, tag, attrs):
+            if self.depth:
+                self.depth += 1
+                self.tags.append((tag, dict(attrs).get("role")))
+            elif dict(attrs).get("role") == "menu":
+                self.depth = 1
+
+        def handle_endtag(self, tag):
+            if self.depth:
+                self.depth -= 1
+
+    log_in_as(client, "octocat")
+    page = text(client.get("/"))
+    parser = MenuChildren()
+    parser.feed(page)
+    assert parser.tags and "p" not in [t for t, r in parser.tags]
+    assert {r for t, r in parser.tags if t in ("a", "button")} == {"menuitem"}
+    # the username line is still shown, inside the dropdown that ui.js hides and shows
+    assert '<div class="menu" id="accountMenu" hidden>' in page and "Logged in as <strong>octocat</strong>" in page
+    assert 'aria-controls="accountMenu"' in page and 'aria-haspopup="menu"' in page

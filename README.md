@@ -112,7 +112,7 @@ flowchart LR
 | Route | What it does |
 |-------|--------------|
 | `GET /` | The shortener page |
-| `POST /shorten` | Creates a link from the form fields `url` and optional `alias` and returns the code. `400` for a bad URL or alias or a Safe Browsing match, `409` if the alias is taken |
+| `POST /shorten` | Creates a link from the form fields `url` and optional `alias` and returns JSON `{"code": ..., "url": ...}` (`url` is the normalised address that was stored). `400` for a bad URL or alias or a Safe Browsing match, `409` if the alias is taken |
 | `GET /<code>` | Redirects to the original URL. `404` if the code doesn't exist or was removed |
 | `GET /report`, `POST /report` | The report form, and saving a report (fields `link` and optional `reason`). `404` if the link doesn't exist |
 | `GET /login` | Sends you to GitHub (`503` if login isn't set up) |

@@ -93,7 +93,7 @@ def create_short_link():
     if result is None:
         return "Alias already taken", 409
 
-    return result
+    return {"code": result, "url": url}  # url is the normalised address that was stored
 
 
 @app.route("/report")
