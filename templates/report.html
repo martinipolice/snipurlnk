@@ -117,6 +117,9 @@
 
             if (!response) {
                 showAlert("error", "Network error. Check your connection and try again.");
+            } else if (response.status >= 500) {
+                // A 500 comes back as an HTML page, which must not be shown as text
+                showAlert("error", "Something went wrong on our side. Please try again.");
             } else if (response.ok) {
                 showAlert("success", text);
                 linkInput.value = "";

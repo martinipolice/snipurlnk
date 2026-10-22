@@ -572,3 +572,19 @@ def test_account_menu_holds_only_menu_items_and_separators(client, with_secret_k
     # the username line is still shown, inside the dropdown that ui.js hides and shows
     assert '<div class="menu" id="accountMenu" hidden>' in page and "Logged in as <strong>octocat</strong>" in page
     assert 'aria-controls="accountMenu"' in page and 'aria-haspopup="menu"' in page
+
+
+# ---- report page server errors, and the license ----
+
+def test_report_page_has_a_friendly_message_for_server_errors(client):
+    page = text(client.get("/report"))
+    assert "response.status >= 500" in page
+    assert "Something went wrong on our side. Please try again." in page
+
+
+def test_license_is_mit_and_the_readme_links_to_it():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    assert (root / "LICENSE").read_text(encoding="utf-8").startswith("MIT License")
+    assert "[LICENSE](LICENSE)" in (root / "README.md").read_text(encoding="utf-8")
