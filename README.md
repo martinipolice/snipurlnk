@@ -1,94 +1,118 @@
 # snipURlnk
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A free URL shortener with custom aliases, QR codes, a link-safety check and optional GitHub login. Built with Flask and Postgres.
 
 **Live demo: <https://snipurlnk.onrender.com>**
 
-I built it as a learning project, one small tested step at a time. It is deployed on free hosting and aimed at friends and classmates, not at heavy traffic.
+I built it as a learning project, one small tested step at a time. It runs on free hosting and is meant for friends and classmates, not heavy traffic.
 
-> The free Render plan puts the app to sleep after 15 minutes without visitors. The first visit after that takes about 30 seconds (I measured 32.5 s). After that, pages load in under a second.
+> The free Render plan puts the app to sleep after 15 minutes without visitors. The first visit after that takes about 30 seconds (I measured 32.5 s).
 
-| Light | Dark |
-|-------|------|
-| ![Home page in the light theme](docs/screenshots/home-light.png) | ![Home page in the dark theme](docs/screenshots/home-dark.png) |
+![Home page: paste a long link, get a short one](docs/screenshots/home.png)
 
-| QR code popup | Friendly 404 page | Unsafe link refused |
-|---------------|-------------------|---------------------|
-| ![QR code popup after shortening a link](docs/screenshots/qr-popup.png) | ![404 page with a stoppable countdown](docs/screenshots/404.png) | ![Error shown for a link Google Safe Browsing flags](docs/screenshots/unsafe-link.png) |
+| Your links dashboard | QR code popup | Friendly 404 page | Unsafe link refused |
+|----------------------|---------------|-------------------|---------------------|
+| ![Dashboard listing your links with Copy, QR code and Remove](docs/screenshots/dashboard.png) | ![QR code popup after shortening a link](docs/screenshots/qr-popup.png) | ![404 page with a stoppable countdown](docs/screenshots/404.png) | ![Error shown for a link Google Safe Browsing flags](docs/screenshots/unsafe-link.png) |
 
 ## Features
 
 **Shortening**
 - Random 6-character codes, or your own alias (3 to 30 letters, digits, `-` or `_`; case-insensitive; some words like `admin` are reserved)
 - A taken code is never overwritten, and every submission creates its own new link
-- Strict URL validation: only `http` and `https` with a real domain, a valid port, no spaces or control characters, at most 2,048 characters. A missing scheme is added for you (`example.com` becomes `https://example.com`)
-- Copy, Go and QR code buttons on each new link. The QR popup also has Download PNG, Share and Copy link
+- Strict URL validation: only `http` and `https` with a real domain, a valid port, no spaces or control characters, at most 2,048 characters. A missing scheme is added for you (`example.com` becomes `https://example.com`), and the result card shows the address that was actually stored
+- Copy, Open and QR code buttons on each new link. The QR popup also has Download PNG, Share (where the browser supports it) and Copy link
 - Click counts for every link
 
 **Accounts (optional)**
 - Log in with GitHub. Anyone can still shorten links without logging in
-- Links made while logged in are yours. A **Your links** dashboard lists them with click counts and creation dates, and lets you Copy, show a QR code, or Remove each one (Remove asks "Are you sure?" first)
+- An account menu in the header shows who you are and links to Your links, Report a link and Log out
+- Links made while logged in are yours. The **Your links** dashboard shows how many you have, lists them newest first (up to 200) with click counts and creation dates, and lets you Copy, show a QR code, or Remove each one. Remove asks for confirmation first
+- With more than 3 links, a search box filters them by code or address (press `/` to jump to it)
 - Only your numeric GitHub ID and username are stored: no email, no passwords
 
 **Safety and abuse control**
-- Every new link is checked against Google Safe Browsing. Links flagged as malware, phishing or unwanted software are refused. If Google can't be reached, the link is allowed through and a warning is logged
+- Every new link is checked against Google Safe Browsing. Links flagged as malware, phishing, unwanted software or potentially harmful apps are refused. If Google can't be reached, the link is allowed through and a warning is logged
 - Rate limits per visitor: 10 new links per minute and 100 per day, 5 reports per minute and 20 per day, 120 requests per minute elsewhere
-- Visitors can report a link from the home page or the 404 page. Reports are reviewed with admin commands in the terminal
+- Visitors can report a link from the home page, the 404 page or the account menu. I review reports with admin commands in the terminal
 
 **Quality**
-- Light and dark themes that follow the device setting
+- One navy theme built from CSS variables, with text colours chosen for strong contrast
 - A friendly 404 page whose countdown can be stopped (screen-reader friendly)
+- Short toast messages ("Link copied", "Link removed"), and plain-language error messages, including a friendly one when the server fails
 - A favicon and a link preview card for chat apps
-- A pytest suite of about 150 tests that runs against a separate test database
+- A pytest suite of 161 tests that runs against a separate test database
 
 ## Quick start (run it locally)
 
-You need Python 3.13 (see `.python-version`) and a free Postgres database from [Neon](https://neon.com).
+You need Python 3.13 (see [.python-version](.python-version)) and a free Postgres database from [Neon](https://neon.com).
+
+**macOS / Linux**
 
 ```bash
 git clone https://github.com/martinipolice/snipurlnk.git
 cd snipurlnk
-python -m venv venv
-source venv/bin/activate        # Windows PowerShell: .\venv\Scripts\Activate.ps1
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-```
-
-Set your database connection string, then start the app. The tables are created automatically on first run.
-
-```bash
-export DATABASE_URL='postgresql://...'      # Windows PowerShell: $env:DATABASE_URL = 'postgresql://...'
+export DATABASE_URL='postgresql://...'
 python app.py
 ```
 
-Open <http://127.0.0.1:5000>. The page loads its styles from a CDN, so it needs an internet connection to look styled. For auto-reload while developing, set `FLASK_DEBUG=1` before starting.
+**Windows PowerShell**
 
-Treat every value below like a password: keep it in environment variables, never commit it, and never paste it into chat or screenshots.
+```powershell
+git clone https://github.com/martinipolice/snipurlnk.git
+cd snipurlnk
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:DATABASE_URL = 'postgresql://...'
+python app.py
+```
+
+If PowerShell refuses to run `Activate.ps1`, allow scripts for this window only with `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and try again.
+
+Open <http://127.0.0.1:5000>. The tables are created automatically on first run. For auto-reload while developing, set `FLASK_DEBUG=1` (PowerShell: `$env:FLASK_DEBUG = '1'`) before starting.
+
+The styles are served by the app itself. The Poppins font and the QR code library come from jsDelivr, so without internet the page falls back to a system font and the QR buttons are hidden; everything else works.
 
 ### Configuration
 
-| Variable | Required | What it is for |
-|----------|----------|----------------|
-| `DATABASE_URL` | yes | Postgres connection string (contains the database password) |
-| `SAFE_BROWSING_API_KEY` | no | Turns on the link safety check. Without it, links aren't checked and a warning is logged. Google limits this API to non-commercial use |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SECRET_KEY` | no | Turn on login with GitHub. Without them, `/login` answers `503` and everything else still works |
-| `TEST_DATABASE_URL` | for tests | A separate test database (see [Running the tests](#running-the-tests)) |
+Treat every secret below like a password: keep it in environment variables, never commit it, and never paste it into chat or screenshots.
 
-**Setting up GitHub login locally:** on GitHub go to Settings, Developer settings, OAuth Apps, New OAuth App. Use `http://127.0.0.1:5000` as the homepage and `http://127.0.0.1:5000/login/github/callback` as the callback URL, and don't request any scopes. Make a key with `python -c "import secrets; print(secrets.token_hex(32))"` for `SECRET_KEY`, and never reuse it on the live site. Always open the local site as `127.0.0.1`, not `localhost`, because the callback address must match exactly.
+| Variable | Required | What it is for | If it is missing |
+|----------|----------|----------------|------------------|
+| `DATABASE_URL` | yes | Postgres connection string (contains the database password) | The app refuses to start (`DATABASE_URL is not set`) |
+| `SAFE_BROWSING_API_KEY` | no | Turns on the link safety check. Google limits this API to non-commercial use | Links aren't checked, and a warning is logged |
+| `SECRET_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | no | Turn on login with GitHub. `SECRET_KEY` signs the session cookie | `/login` answers `503`; everything else still works |
+| `RENDER` | no | Render sets it to `true`, which makes the session cookie `Secure` (HTTPS only) | The cookie also works over plain `http`, as it must locally |
+| `FLASK_DEBUG` | no | `1` turns on auto-reload and the debugger with `python app.py`. Never on the live site | Normal mode |
+| `TEST_DATABASE_URL` | for tests | A separate test database (see [Running the tests](#running-the-tests)) | The database and route tests are skipped |
+
+**Setting up GitHub login locally:** on GitHub go to Settings, Developer settings, OAuth Apps, New OAuth App. Use `http://127.0.0.1:5000` as the homepage and `http://127.0.0.1:5000/login/github/callback` as the callback URL, and don't request any scopes. Make a key for `SECRET_KEY` with:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Never reuse that key on the live site. Always open the local site as `127.0.0.1`, not `localhost`, because the callback address must match exactly.
 
 ## How it works
 
 ```mermaid
 flowchart LR
     visitor(["Visitor's browser"])
-    cdn["jsDelivr CDN<br/>Puppertino styles, QR library"]
+    cdn["jsDelivr CDN<br/>Poppins font, QR library"]
     app["Render web service<br/>gunicorn + Flask"]
     db[("Neon Postgres<br/>links, reports, users")]
     google["Google Safe Browsing"]
     ghlogin["GitHub login (OAuth)"]
     github["GitHub repo"]
 
-    visitor -->|"HTTPS: shorten, redirect, report"| app
-    visitor -.->|"loads styles and QR library"| cdn
+    visitor -->|"HTTPS: shorten, redirect, report, dashboard"| app
+    visitor -.->|"loads font and QR library"| cdn
     visitor -.->|"log in"| ghlogin
     ghlogin -.->|"who you are"| app
     app -->|"SQL"| db
@@ -102,6 +126,7 @@ flowchart LR
 2. If you gave an alias, it must match the allowed pattern and not be reserved (`400`).
 3. Google Safe Browsing is asked about the URL. A flagged URL is refused with a `400` and nothing is saved. If Google doesn't answer within 3 seconds, the link goes through.
 4. The link is saved. With an alias, the server tries that code once and returns `409` if it is taken. Without one, it picks a random code and retries on a collision. If you are logged in, the link is stored with your user ID as its owner.
+5. The reply is JSON with the code and the stored URL, which the page shows in the result card.
 
 **Visiting a link:** the server looks up the code, adds 1 to its click count and redirects. Unknown or removed codes return the 404 page and change nothing.
 
@@ -112,14 +137,15 @@ flowchart LR
 | Route | What it does |
 |-------|--------------|
 | `GET /` | The shortener page |
-| `POST /shorten` | Creates a link from the form fields `url` and optional `alias` and returns JSON `{"code": ..., "url": ...}` (`url` is the normalised address that was stored). `400` for a bad URL or alias or a Safe Browsing match, `409` if the alias is taken |
-| `GET /<code>` | Redirects to the original URL. `404` if the code doesn't exist or was removed |
-| `GET /report`, `POST /report` | The report form, and saving a report (fields `link` and optional `reason`). `404` if the link doesn't exist |
+| `POST /shorten` | Creates a link from the form fields `url` and optional `alias`. Returns JSON `{"code": ..., "url": ...}`, where `url` is the normalised address that was stored. `400` for a bad URL or alias or a Safe Browsing match, `409` if the alias is taken, `429` over the rate limit |
+| `GET /<code>` | `302` redirect to the original URL. `404` page if the code doesn't exist or was removed |
+| `GET /report` | The report form |
+| `POST /report` | Saves a report (fields `link` and optional `reason`). `400` without a link, `404` if the link doesn't exist, `429` over the rate limit |
 | `GET /login` | Sends you to GitHub (`503` if login isn't set up) |
-| `GET /login/github/callback` | Where GitHub sends you back. Starts your session (`400` if the login fails) |
-| `POST /logout` | Ends your session |
-| `GET /dashboard` | Your links, newest first, up to 200. Sends you to log in if you aren't. Never cached |
-| `POST /remove/<code>` | Removes one of your links. `404` if it isn't yours or is already gone |
+| `GET /login/github/callback` | Where GitHub sends you back. Starts your session and redirects home (`400` if the login fails) |
+| `POST /logout` | Ends your session, `303` back home |
+| `GET /dashboard` | Your links, newest first, up to 200. Never cached. Redirects to `/login` if you aren't logged in |
+| `POST /remove/<code>` | Removes one of your links, `303` back to the dashboard. `404` if it isn't yours or is already gone; `303` to `/login` if you aren't logged in |
 
 ### Design decisions
 
@@ -132,14 +158,15 @@ flowchart LR
 - **Click counts include every redirect**, including link previews and prefetches. Filtering them out is a possible later improvement.
 - **QR codes are made in the browser** with `qrcode-generator` (pinned to one version with an integrity hash, loaded from jsDelivr), so the server does no extra work. If the library doesn't load, the QR buttons disappear and the rest still works. Codes are always black on white, because inverted codes fail in many scanners.
 - **The 404 countdown can be stopped.** A timed redirect can lock out slow readers, so there is a Stop button, a plain "go now" link, and one quiet announcement for screen readers instead of one per second.
-- **Remove asks first.** A `<dialog>` names the link and explains that its code stays taken. Removal itself is a `POST`, and the `SameSite=Lax` cookie stops other sites from triggering it.
+- **Remove asks first.** A `<dialog>` names the link and explains that its code stays taken. Removal itself is a `POST`, and the `SameSite=Lax` cookie stops other sites from triggering it. "Link removed" is shown only after the server confirms.
+- **No front-end framework.** The theme is CSS variables in [static/style.css](static/style.css), and the menus, toasts and QR popup are small plain-JavaScript files.
 
 ## Deployment
 
 - **Host:** Render free web service (Singapore), started with `gunicorn app:app`, with deploys triggered manually after the tests pass
 - **Database:** a Neon Postgres project separate from the one used for development. Before a release that changes tables, I make a Neon branch of it as a restore point. Table changes in `init_db()` only add things, so the previous version keeps working if I have to roll back
-- **Settings:** all environment variables above are set on Render's Environment page. The live site has its own GitHub OAuth app (callback `https://snipurlnk.onrender.com/login/github/callback`) and its own `SECRET_KEY`
-- **Python:** pinned in `.python-version`
+- **Settings:** the environment variables above are set on Render's Environment page. The live site has its own GitHub OAuth app (callback `https://snipurlnk.onrender.com/login/github/callback`) and its own `SECRET_KEY`
+- **Python:** pinned in [.python-version](.python-version)
 - **Visitor address:** Render adds three addresses to `X-Forwarded-For`, so the app trusts exactly three (`ProxyFix(x_for=3)`). I measured this on the live site, and a test checks that a faked header can't get around the rate limit
 - **Rate-limit storage:** in memory, which is correct only with one gunicorn worker. Moving to several workers would need a shared store
 
@@ -160,7 +187,7 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-The validation and text-helper tests need no database and run in a fraction of a second:
+There are 161 tests. The 52 validation and text-helper tests need no database and run in a fraction of a second:
 
 ```bash
 python -m pytest -q tests/test_validation.py tests/test_text_helpers.py
@@ -169,49 +196,67 @@ python -m pytest -q tests/test_validation.py tests/test_text_helpers.py
 The Safe Browsing tests use a fake network, so they never contact Google. The login tests use a fake GitHub. The database and route tests need a separate test database and skip themselves without one:
 
 1. In Neon, create a branch of your database (for example `test`) and copy its connection string.
-2. Set it as `TEST_DATABASE_URL`. This is a different variable from `DATABASE_URL`.
+2. Set it as `TEST_DATABASE_URL`. This is a different variable from `DATABASE_URL`. In PowerShell, use single quotes: `$env:TEST_DATABASE_URL = 'postgresql://...'`
 3. Mark it as a test database, once, in Neon's SQL Editor or any Postgres client:
    ```sql
    CREATE TABLE IF NOT EXISTS i_am_a_test_database (id INTEGER);
    ```
 
-The tests empty the `reports`, `links` and `users` tables before every test, so there are three safety checks. They skip if `TEST_DATABASE_URL` is missing, refuse to run if it matches `DATABASE_URL`, and refuse to delete anything unless the `i_am_a_test_database` table exists. Never create that table in your real database. The full run takes two to four minutes.
+The tests empty the `reports`, `links` and `users` tables before every test, so there are three safety checks. They skip if `TEST_DATABASE_URL` is missing, refuse to run if it matches `DATABASE_URL`, and refuse to delete anything unless the `i_am_a_test_database` table exists. Never create that table in your real database. A full run takes about three to six minutes, mostly waiting on the remote database.
+
+The tests check the HTML the server sends, but they don't run the page's JavaScript, so I also check changes in the browser.
 
 ## Project structure
 
 ```
 snipurlnk/
-├── app.py                    # Flask routes, login, dashboard
+├── app.py                    # Flask routes, login, dashboard, rate limits
 ├── shorten.py                # Validation, code generation, Postgres storage, users, owned links
 ├── safety.py                 # Google Safe Browsing check
 ├── admin.py                  # Review reports and remove links from the terminal
 ├── templates/
+│   ├── _head.html            # Shared <head>: meta tags, favicon, font, styles, scripts
+│   ├── _header.html          # Shared header: brand, login link or account menu
+│   ├── _qr_dialog.html       # QR popup and the pinned QR library, shared by home and dashboard
 │   ├── index.html            # Home page and its script
-│   ├── dashboard.html        # Your links, with Copy, QR and Remove
-│   ├── _qr_dialog.html       # QR popup, shared by the home page and dashboard
-│   ├── 404.html              # Friendly "link not found" page
-│   └── report.html           # Report form
+│   ├── dashboard.html        # Your links, with search, Copy, QR and Remove
+│   ├── report.html           # Report form
+│   └── 404.html              # Friendly "link not found" page
 ├── static/
-│   ├── style.css             # Layout and theme tweaks on top of Puppertino
+│   ├── style.css             # The navy theme (CSS variables) and all layout
+│   ├── ui.js                 # Dropdown menu keyboard handling and the / search shortcut
+│   ├── toast.js              # Small corner messages, including one kept across a reload
 │   ├── qr.js                 # Draws, downloads, shares and copies QR codes
+│   ├── icons.svg             # Icon sprite used by every page
+│   ├── logo.png              # Home page logo
+│   ├── mascot.png            # Mascot in the header, 404 page and empty dashboard
 │   ├── favicon.png           # Browser tab icon
 │   └── share.png             # Link preview image (1200x630)
-├── tests/                    # pytest suite and its test-database safety checks
+├── tests/
+│   ├── conftest.py           # Test-database fixture and its safety checks
+│   ├── test_database.py      # Storage, clicks, reports, users, ownership
+│   ├── test_routes.py        # Every route, login, rate limits, page HTML
+│   ├── test_safety.py        # Safe Browsing with a fake network
+│   ├── test_text_helpers.py  # URL normalising, alias rules, code extraction
+│   └── test_validation.py    # URL rules
 ├── docs/screenshots/         # Images used in this README
-├── pytest.ini
+├── .gitignore
 ├── .python-version           # Python version used on Render
+├── pytest.ini
 ├── requirements.txt          # What the app needs to run
-└── requirements-dev.txt      # Adds the test tools
+├── requirements-dev.txt      # Adds the test tools
+├── LICENSE
+└── README.md
 ```
 
 ## Roadmap
 
-Done: core shortening, Postgres storage, validation, custom aliases, light/dark UI, rate limiting, report and remove, automated tests, deployment on Render and Neon, Safe Browsing, custom 404, QR codes, favicon and preview card, GitHub login, and the dashboard with Copy, QR and Remove.
+Done: core shortening, Postgres storage, validation, custom aliases, rate limiting, report and remove, automated tests, deployment on Render and Neon, Safe Browsing, custom 404, QR codes, favicon and preview card, GitHub login, the dashboard with search, Copy, QR and Remove, the navy redesign, a round of small fixes, and the MIT license.
 
 Next:
 - [ ] Link expiry
-- [ ] Redesign the front end (then retake the screenshots, and add one of the dashboard)
 - [ ] Speed up the test suite
+- [ ] An accessibility pass
 
 ## What I learned
 
@@ -225,6 +270,7 @@ Next:
 - **My tests don't run my JavaScript.** After moving the QR code into a shared file, one leftover `let` declared the same name twice and the live Shorten button silently stopped working. I only saw it in the browser console. I added a test for that line and now check the console after editing any template.
 - **Secrets stay out of code and chat.** They live in environment variables and Render's settings, and the Safe Browsing key is restricted to one API and sent in a header so it can't end up in a URL or a log.
 - **Accessibility is part of "done".** A stoppable countdown, announcements made once instead of every second, and real `<dialog>` popups.
+- **An AI assistant works best with small briefs.** I used Claude Code with one short, specific task at a time, then read its changes, ran the tests and checked the result in the browser myself before merging.
 
 ## License
 
