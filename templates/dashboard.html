@@ -41,7 +41,7 @@
                     {% for code, url, clicks, created_at in links %}
                         {% set short = url_for('follow_link', code=code, _external=True) %}
                         <li class="link-card" data-search="{{ (code ~ ' ' ~ url)|lower }}">
-                            <a class="short-link" href="{{ short }}" target="_blank" rel="noopener">{{ short.split('://', 1)[-1] }}</a>
+                            <span class="short-link">{{ short.split('://', 1)[-1] }}</span>
                             <span class="dest" title="{{ url }}">{{ url }}</span>
                             <span class="meta">
                                 <span class="clicks">{{ clicks }} click{{ '' if clicks == 1 else 's' }}</span>

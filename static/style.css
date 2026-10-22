@@ -374,7 +374,7 @@ label {
     overflow-wrap: anywhere;
     text-decoration: none;
 }
-.short-link:hover { color: var(--accent-hover); text-decoration: underline; }
+a.short-link:hover { color: var(--accent-hover); text-decoration: underline; }
 .result-dest {
     margin-top: .4rem;
     overflow: hidden;
