@@ -178,15 +178,30 @@
                 return;
             }
 
+            const SERVER_ERROR = "Something went wrong on our side. Please try again.";
             const text = await response.text();
             setBusy(false);
 
+            // A 500 comes back as an HTML page, which must not be shown as text
+            if (response.status >= 500) {
+                showError(SERVER_ERROR);
+                return;
+            }
             if (!response.ok) {
                 showError(text);
                 return;
             }
 
-            const code = text;
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                showError(SERVER_ERROR);
+                return;
+            }
+
+            const code = data.code;
+            const storedUrl = data.url;
             const shortUrl = window.location.origin + "/" + code;
 
             const card = document.createElement("div");
@@ -227,8 +242,8 @@
             // Where the short link goes, so people can check it before sharing
             const dest = document.createElement("p");
             dest.className = "result-dest";
-            dest.title = longUrl.trim();
-            dest.textContent = "Goes to " + longUrl.trim();
+            dest.title = storedUrl;
+            dest.textContent = "Goes to " + storedUrl;
 
             const actions = document.createElement("div");
             actions.className = "result-actions";

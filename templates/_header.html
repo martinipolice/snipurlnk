@@ -20,21 +20,24 @@
                     <svg class="icon chevron" aria-hidden="true"><use href="{{ icons }}#i-chevron"/></svg>
                     <span class="visually-hidden">Account menu</span>
                 </button>
-                <div class="menu" id="accountMenu" role="menu" aria-labelledby="accountTrigger" hidden>
+                {# The username line sits outside role="menu", which may only hold items and separators #}
+                <div class="menu" id="accountMenu" hidden>
                     <p class="menu-label">Logged in as <strong>{{ current_user[1] }}</strong></p>
                     <div class="menu-separator" role="separator"></div>
-                    <a class="menu-item" role="menuitem" tabindex="-1" href="{{ url_for('dashboard') }}">
-                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-link"/></svg>Your links
-                    </a>
-                    <a class="menu-item" role="menuitem" tabindex="-1" href="{{ url_for('report_page') }}">
-                        <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-flag"/></svg>Report a link
-                    </a>
-                    <div class="menu-separator" role="separator"></div>
-                    <form method="post" action="{{ url_for('logout') }}">
-                        <button type="submit" class="menu-item menu-item-danger" role="menuitem" tabindex="-1">
-                            <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-logout"/></svg>Log out
-                        </button>
-                    </form>
+                    <div role="menu" aria-labelledby="accountTrigger">
+                        <a class="menu-item" role="menuitem" tabindex="-1" href="{{ url_for('dashboard') }}">
+                            <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-link"/></svg>Your links
+                        </a>
+                        <a class="menu-item" role="menuitem" tabindex="-1" href="{{ url_for('report_page') }}">
+                            <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-flag"/></svg>Report a link
+                        </a>
+                        <div class="menu-separator" role="separator"></div>
+                        <form method="post" action="{{ url_for('logout') }}">
+                            <button type="submit" class="menu-item menu-item-danger" role="menuitem" tabindex="-1">
+                                <svg class="icon" aria-hidden="true"><use href="{{ icons }}#i-logout"/></svg>Log out
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         {% else %}

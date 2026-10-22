@@ -99,9 +99,22 @@
             });
         });
 
-        // The page reloads after removing, so the message waits for the next page
-        removeForm.addEventListener("submit", function () {
-            toastAfterReload("Link removed");
+        // The page reloads after removing, so the message waits for the next page.
+        // It is only saved once the server said yes; on failure the page stays as it is.
+        removeForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            let response = null;
+            try {
+                response = await fetch(removeForm.action, { method: "POST" });
+            } catch (error) { /* network error: handled below */ }
+            // Success redirects back here; a logged-out visitor is sent to /login instead
+            if (response && response.ok && new URL(response.url).pathname === "{{ url_for('dashboard') }}") {
+                toastAfterReload("Link removed");
+                window.location.reload();
+                return;
+            }
+            removeDialog.close();
+            showToast("Couldn't remove the link. Please try again.", "error");
         });
 
         document.getElementById("removeCancel").addEventListener("click", function () {
